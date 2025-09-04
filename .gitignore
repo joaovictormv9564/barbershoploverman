@@ -1,0 +1,10 @@
+# Banco de dados SQLite
+db/barbershop.db
+db/barber.sqlbpro
+
+# Dependências do Node.js
+node_modules/
+package-lock.json
+
+# Arquivos de configuração sensíveis
+.env
