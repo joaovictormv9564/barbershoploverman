@@ -254,6 +254,11 @@ async function loadClients() {
 }
 
 // Carrega agendamentos
+function addMinutes(time, minutes) {
+    const [hours, mins] = time.split(':').map(Number);
+    const date = new Date(0, 0, 0, hours, mins + minutes);
+    return date.toTimeString().slice(0, 5);
+}
 async function loadAppointments(barberId, isAdmin = false) {
     try {
         let url = '/api/appointments';
@@ -262,13 +267,22 @@ async function loadAppointments(barberId, isAdmin = false) {
         } else if (barberId) {
             url += `?barber_id=${barberId}`;
         }
+        console.log('Carregando agendamentos da URL:', url); // Log para depuração
         const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+        }
         const appointments = await response.json();
+        console.log('Agendamentos recebidos:', appointments); // Log para verificar dados
         return appointments.map(appointment => ({
-            title: `Agendamento com ${appointment.barber_name}${isAdmin ? ` (Cliente ID: ${appointment.client_id})` : ''}`,
+            title: `Agendamento com ${appointment.barber_name}${isAdmin ? ` (${appointment.client_name})` : ''}`,
             start: `${appointment.date}T${appointment.time}`,
-            end: `${appointment.date}T${appointment.time}`,
-            id: appointment.id
+            end: `${appointment.date}T${addMinutes(appointment.time, 30)}`, // Duração de 30 minutos
+            id: appointment.id,
+            backgroundColor: 'red', // Vermelho para horários ocupados
+            borderColor: 'red',
+            textColor: 'white', // Texto branco para legibilidade
+            className: 'occupied' // Classe CSS para estilo adicional
         }));
     } catch (error) {
         console.error('Erro ao carregar agendamentos:', error);
@@ -276,7 +290,7 @@ async function loadAppointments(barberId, isAdmin = false) {
         return [];
     }
 }
-// Inicializa o calendário do cliente
+
 async function initializeClientCalendar() {
     const calendarEl = document.getElementById('calendar');
     const barberSelect = document.getElementById('barber-select');
@@ -287,8 +301,14 @@ async function initializeClientCalendar() {
         slotMaxTime: '20:00:00',
         slotDuration: '00:30:00',
         selectable: true,
-        events: await loadAppointments(barberId, false),
+        selectOverlap: false, // Impede seleção em horários ocupados
+        events: async (info, successCallback, failureCallback) => {
+            const barberId = barberSelect.value;
+            const events = await loadAppointments(barberId, false);
+            successCallback(events);
+        },
         select: async function (info) {
+            const barberId = barberSelect.value;
             if (!barberId) {
                 alert('Selecione um barbeiro antes de escolher um horário');
                 return;
@@ -314,9 +334,15 @@ async function initializeClientCalendar() {
                     alert('Erro ao criar agendamento');
                 }
             }
+        },
+        eventClick: function (info) {
+            alert('Este horário já está ocupado');
+            info.jsEvent.preventDefault(); // Impede ações em eventos ocupados
         }
     });
     calendar.render();
+    // Atualiza eventos quando o barbeiro é selecionado
+    barberSelect.addEventListener('change', () => calendar.refetchEvents());
 }
 
 // Inicializa o calendário do admin

@@ -1,8 +1,23 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const app = express();
-const db = new sqlite3.Database('./db/barbershop.db');
-
+const fs = require('fs');
+const path = require('path');
+const dbPath = process.env.VERCEL ? '/tmp/barbershop.db' : './db/barbershop.db';
+// Cria o diretório db/ localmente, se não existir
+if (!process.env.VERCEL) {
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+    }
+}
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('Erro ao conectar ao banco de dados:', err);
+    } else {
+        console.log('Conectado ao banco de dados:', dbPath);
+    }
+});
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -166,7 +181,7 @@ app.put('/api/barbers/:id', (req, res) => {
 
 // Listar agendamentos
 app.get('/api/appointments', (req, res) => {
-    const { client_id, barber_id } = req.query;
+    const { barber_id, client_id } = req.query;
     let query = `
         SELECT a.id, a.date, a.time, a.barber_id, a.client_id, b.name AS barber_name, u.name AS client_name
         FROM appointments a
@@ -174,22 +189,23 @@ app.get('/api/appointments', (req, res) => {
         JOIN users u ON a.client_id = u.id
     `;
     const params = [];
-    if (client_id || barber_id) {
-        query += ' WHERE';
-        if (client_id) {
-            query += ' a.client_id = ?';
-            params.push(client_id);
-        }
-        if (barber_id) {
-            query += (client_id ? ' AND' : '') + ' a.barber_id = ?';
-            params.push(barber_id);
-        }
+    if (barber_id && client_id) {
+        query += ` WHERE a.barber_id = ? AND a.client_id = ?`;
+        params.push(barber_id, client_id);
+    } else if (barber_id) {
+        query += ` WHERE a.barber_id = ?`;
+        params.push(barber_id);
+    } else if (client_id) {
+        query += ` WHERE a.client_id = ?`;
+        params.push(client_id);
     }
+    console.log('Executando query:', query, 'com params:', params); // Log para depuração
     db.all(query, params, (err, rows) => {
         if (err) {
-            console.error('Erro ao listar agendamentos:', err);
+            console.error('Erro ao buscar agendamentos:', err);
             return res.status(500).json({ error: 'Erro no servidor' });
         }
+        console.log('Agendamentos enviados:', rows);
         res.json(rows);
     });
 });

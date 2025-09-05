@@ -90,3 +90,8 @@ th {
         font-size: 1.8em;
     }
 }
+.fc-event.occupied {
+    background-color: red !important;
+    border-color: red !important;
+    color: white !important;
+}
