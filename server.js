@@ -1,10 +1,10 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const app = express();
 const fs = require('fs');
 const path = require('path');
+const app = express();
+
 const dbPath = process.env.VERCEL ? '/tmp/barbershop.db' : './db/barbershop.db';
-// Cria o diretório db/ localmente, se não existir
 if (!process.env.VERCEL) {
     const dbDir = path.dirname(dbPath);
     if (!fs.existsSync(dbDir)) {
@@ -18,17 +18,18 @@ const db = new sqlite3.Database(dbPath, (err) => {
         console.log('Conectado ao banco de dados:', dbPath);
     }
 });
+
 app.use(express.json());
 app.use(express.static('public'));
 
-// Inicializa o banco de dados
+// Criação das tabelas
 db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL,
+            username TEXT UNIQUE,
+            password TEXT,
+            role TEXT,
             name TEXT,
             phone TEXT
         )
@@ -36,50 +37,76 @@ db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS barbers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
+            name TEXT
         )
     `);
     db.run(`
         CREATE TABLE IF NOT EXISTS appointments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            time TEXT NOT NULL,
-            barber_id INTEGER NOT NULL,
-            client_id INTEGER NOT NULL,
+            date TEXT,
+            time TEXT,
+            barber_id INTEGER,
+            client_id INTEGER,
             FOREIGN KEY (barber_id) REFERENCES barbers(id),
             FOREIGN KEY (client_id) REFERENCES users(id)
         )
     `);
-    db.run(
-        `INSERT OR IGNORE INTO users (username, password, role, name, phone) 
-         VALUES (?, ?, ?, ?, ?)`,
-        ['admin', 'admin123', 'admin', 'Administrador', '123456789'],
-        (err) => {
-            if (err) console.error('Erro ao inserir admin:', err);
-            else console.log('Usuário admin criado com sucesso');
+
+    // Insere usuário admin padrão
+    db.get('SELECT * FROM users WHERE username = ?', ['admin'], (err, row) => {
+        if (err) {
+            console.error('Erro ao verificar admin:', err);
         }
-    );
-    db.run(`INSERT OR IGNORE INTO barbers (name) VALUES ('João Silva')`);
-    db.run(`INSERT OR IGNORE INTO barbers (name) VALUES ('Maria Santos')`);
+        if (!row) {
+            db.run(
+                'INSERT INTO users (username, password, role, name, phone) VALUES (?, ?, ?, ?, ?)',
+                ['admin', 'admin123', 'admin', 'Administrador', '123456789'],
+                (err) => {
+                    if (err) console.error('Erro ao criar admin:', err);
+                    else console.log('Usuário admin criado com sucesso');
+                }
+            );
+        }
+    });
+
+    // Insere barbeiros padrão
+    db.get('SELECT * FROM barbers WHERE name = ?', ['João Silva'], (err, row) => {
+        if (err) {
+            console.error('Erro ao verificar barbeiros:', err);
+        }
+        if (!row) {
+            db.run('INSERT INTO barbers (name) VALUES (?)', ['João Silva']);
+            db.run('INSERT INTO barbers (name) VALUES (?)', ['Maria Santos']);
+        }
+    });
 });
 
-// Login
+// Endpoint de login
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     console.log('Tentativa de login:', { username, password });
-    db.get('SELECT * FROM users WHERE username = ? AND password = ?', [username, password], (err, user) => {
-        if (err) {
-            console.error('Erro no banco:', err);
-            return res.status(500).json({ error: 'Erro no servidor' });
+    db.get(
+        'SELECT * FROM users WHERE username = ? AND password = ?',
+        [username, password],
+        (err, row) => {
+            if (err) {
+                console.error('Erro no login:', err);
+                return res.status(500).json({ error: 'Erro no servidor' });
+            }
+            if (!row) {
+                console.log('Credenciais inválidas para:', username);
+                return res.status(401).json({ error: 'Credenciais inválidas' });
+            }
+            console.log('Usuário encontrado:', row);
+            res.json({ id: row.id, role: row.role, username: row.username });
         }
-        if (!user) {
-            console.log('Usuário não encontrado ou senha inválida:', username);
-            return res.status(401).json({ error: 'Credenciais inválidas' });
-        }
-        console.log('Usuário encontrado:', user);
-        res.json({ id: user.id, role: user.role, username: user.username });
-    });
+    );
 });
+
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
+
 
 // Registro
 app.post('/api/register', (req, res) => {
