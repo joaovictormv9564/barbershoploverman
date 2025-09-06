@@ -7,7 +7,7 @@ const app = express();
 const requiredEnvVars = ['PGHOST', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGPORT'];
 requiredEnvVars.forEach((varName) => {
     if (!process.env[varName]) {
-        console.error(`Erro: Variável de ambiente ${varName} não definida`);
+        console.error(`Erro crítico: Variável de ambiente ${varName} não definida`);
     }
 });
 
@@ -25,7 +25,10 @@ const pool = new Pool({
     user: process.env.PGUSER,
     password: process.env.PGPASSWORD,
     port: process.env.PGPORT || 5432,
-    ssl: process.env.PGHOST ? { rejectUnauthorized: false } : false
+    ssl: process.env.PGHOST ? { rejectUnauthorized: false } : false,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000
 });
 
 // Testar conexão ao iniciar
@@ -33,6 +36,8 @@ const pool = new Pool({
     try {
         const client = await pool.connect();
         console.log('Conexão ao banco Neon PostgreSQL bem-sucedida');
+        const res = await client.query('SELECT NOW()');
+        console.log('Resposta do banco:', res.rows[0]);
         client.release();
     } catch (err) {
         console.error('Erro ao conectar ao banco Neon:', err);
@@ -216,7 +221,6 @@ app.get('/api/barbers', async (req, res) => {
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));

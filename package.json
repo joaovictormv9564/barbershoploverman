@@ -8,8 +8,7 @@
   },
   "dependencies": {
     "express": "^4.17.1",
-    "sqlite3": "^5.0.0",
-    "pg": "^8.7.3"
+    "pg": "^8.16.3"
   },
   "author": "Seu Nome",
   "license": "ISC"
