@@ -425,19 +425,120 @@ async function loadAppointments(barberId, isAdmin = false) {
         return [];
     }
 }
-// Alternar visão do calendário
-function changeCalendarView(view) {
-    currentView = view; // Atualiza a visão atual
-    const barberId = document.getElementById('barber-select').value;
-    if (barberId) {
-        loadAppointmentsAdmin(barberId); // Recarrega o calendário com a nova visão
+// Presume que estas variáveis estão declaradas globalmente no seu app.js
+let calendarAdmin; // Calendário do administrador
+let currentBarberId = null; // ID do barbeiro selecionado
+
+// Carregar agendamentos para o administrador
+async function loadAppointmentsAdmin(barberId) {
+    try {
+        const response = await fetch(`/api/appointments?barber_id=${barberId}`);
+        const appointments = await response.json();
+        if (!response.ok) {
+            throw new Error(appointments.error || 'Erro ao carregar agendamentos');
+        }
+        currentBarberId = barberId; // Armazena o barbeiro atual
+        // Inicializar o calendário apenas na primeira vez
+        if (!calendarAdmin) {
+            const calendarEl = document.getElementById('calendar-admin');
+            calendarAdmin = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                slotMinTime: '08:00:00',
+                slotMaxTime: '18:00:00',
+                slotDuration: '00:30:00',
+                allDaySlot: false,
+                events: appointments.map(appointment => ({
+                    title: `${appointment.client_name} - ${appointment.barber_name}`,
+                    start: `${appointment.date}T${appointment.time}`,
+                    backgroundColor: 'red',
+                    borderColor: 'red',
+                    textColor: 'white',
+                    editable: false
+                })),
+                eventClick: function(info) {
+                    alert(`Agendamento: ${info.event.title} em ${info.event.start.toLocaleString()}`);
+                }
+            });
+            calendarAdmin.render();
+        } else {
+            // Atualizar eventos sem recriar o calendário
+            calendarAdmin.getEvents().forEach(event => event.remove());
+            appointments.forEach(appointment => {
+                calendarAdmin.addEvent({
+                    title: `${appointment.client_name} - ${appointment.barber_name}`,
+                    start: `${appointment.date}T${appointment.time}`,
+                    backgroundColor: 'red',
+                    borderColor: 'red',
+                    textColor: 'white',
+                    editable: false
+                });
+            });
+        }
+        console.log('Agendamentos do administrador carregados:', appointments);
+    } catch (error) {
+        console.error('Erro ao carregar agendamentos do administrador:', error);
+        alert('Erro ao carregar agendamentos: ' + error.message);
     }
 }
 
-// Configurar o select de visão
+// Alternar visão do calendário
+function changeCalendarView(view) {
+    if (calendarAdmin) {
+        calendarAdmin.changeView(view); // Muda a visão (timeGridWeek ou timeGridDay)
+        console.log('Visão alterada para:', view);
+    } else {
+        console.warn('Calendário não inicializado');
+    }
+}
+
+// Configurar eventos do DOM
 document.addEventListener('DOMContentLoaded', function() {
     const barberSelect = document.getElementById('barber-select');
     const viewSelect = document.getElementById('calendar-view');
+
+    // Carregar barbeiros (supondo que já existe no seu código)
+    async function loadBarbers() {
+        try {
+            const response = await fetch('/api/barbers');
+            const barbers = await response.json();
+            if (!response.ok) {
+                throw new Error(barbers.error || 'Erro ao carregar barbeiros');
+            }
+            barberSelect.innerHTML = '<option value="">Selecione um barbeiro</option>';
+            barbers.forEach(barber => {
+                const option = document.createElement('option');
+                option.value = barber.id;
+                option.textContent = barber.name;
+                barberSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Erro ao carregar barbeiros:', error);
+            alert('Erro ao carregar barbeiros: ' + error.message);
+        }
+    }
+
+    // Evento de mudança no barbeiro
+    barberSelect.addEventListener('change', function() {
+        const barberId = this.value;
+        if (barberId) {
+            loadAppointmentsAdmin(barberId);
+        } else {
+            if (calendarAdmin) {
+                calendarAdmin.getEvents().forEach(event => event.remove());
+                calendarAdmin.destroy();
+                calendarAdmin = null;
+            }
+        }
+    });
+
+    // Evento de mudança na visão
+    viewSelect.addEventListener('change', function() {
+        const view = this.value;
+        changeCalendarView(view);
+    });
+
+    // Inicializar
+    loadBarbers();
 });
 
 // Marca um agendamento pelo admin
