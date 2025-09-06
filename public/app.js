@@ -389,8 +389,10 @@ async function initializeAdminCalendar() {
                 }
             }
         }
+        
     });
     calendar.render();
+    
     // Recarrega agendamentos quando o barbeiro é selecionado
     barberSelect.addEventListener('change', () => {
         calendar.refetchEvents();
@@ -423,6 +425,21 @@ async function loadAppointments(barberId, isAdmin = false) {
         return [];
     }
 }
+// Alternar visão do calendário
+function changeCalendarView(view) {
+    currentView = view; // Atualiza a visão atual
+    const barberId = document.getElementById('barber-select').value;
+    if (barberId) {
+        loadAppointmentsAdmin(barberId); // Recarrega o calendário com a nova visão
+    }
+}
+
+// Configurar o select de visão
+document.addEventListener('DOMContentLoaded', function() {
+    const barberSelect = document.getElementById('barber-select');
+    const viewSelect = document.getElementById('calendar-view');
+});
+
 // Marca um agendamento pelo admin
 async function createAdminAppointment() {
     const clientId = document.getElementById('admin-client-select').value;
@@ -459,6 +476,11 @@ async function createAdminAppointment() {
         alert('Erro ao marcar agendamento');
     }
 }
+// Evento de mudança na visão
+    viewSelect.addEventListener('change', function() {
+        const view = this.value;
+        changeCalendarView(view);
+    });
 
 // Inicializa a aplicação
 showLogin();

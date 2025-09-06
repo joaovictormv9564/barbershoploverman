@@ -60,6 +60,14 @@
     <button onclick="createAdminAppointment()">Marcar Agendamento</button>
     <h3>Calendário de Agendamentos</h3>
     <div id="admin-calendar"></div>
+    <div>
+    <label for="calendar-view">Visualização:</label>
+    <select id="calendar-view">
+        <option value="timeGridWeek">Semana</option>
+        <option value="timeGridDay">Dia</option>
+    </select>
+</div>
+<div id="calendar-admin"></div>
     <h3>Clientes Cadastrados</h3>
     <table id="clients-table">
         <thead><tr><th>ID</th><th>Usuário</th><th>Nome</th><th>Telefone</th></tr></thead>
