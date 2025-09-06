@@ -3,6 +3,21 @@ const { Pool } = require('pg');
 const path = require('path');
 const app = express();
 
+// Validar variáveis de ambiente
+const requiredEnvVars = ['PGHOST', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGPORT'];
+requiredEnvVars.forEach((varName) => {
+    if (!process.env[varName]) {
+        console.error(`Erro: Variável de ambiente ${varName} não definida`);
+    }
+});
+
+console.log('Variáveis de ambiente:', {
+    PGHOST: process.env.PGHOST,
+    PGDATABASE: process.env.PGDATABASE,
+    PGUSER: process.env.PGUSER,
+    PGPORT: process.env.PGPORT
+});
+
 // Configuração do PostgreSQL
 const pool = new Pool({
     host: process.env.PGHOST,
@@ -10,8 +25,19 @@ const pool = new Pool({
     user: process.env.PGUSER,
     password: process.env.PGPASSWORD,
     port: process.env.PGPORT || 5432,
-    ssl: { rejectUnauthorized: false } // Necessário para Neon na Vercel
+    ssl: process.env.PGHOST ? { rejectUnauthorized: false } : false
 });
+
+// Testar conexão ao iniciar
+(async () => {
+    try {
+        const client = await pool.connect();
+        console.log('Conexão ao banco Neon PostgreSQL bem-sucedida');
+        client.release();
+    } catch (err) {
+        console.error('Erro ao conectar ao banco Neon:', err);
+    }
+})();
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -20,6 +46,8 @@ app.use(express.static('public'));
 (async () => {
     const client = await pool.connect();
     try {
+        await client.query('BEGIN');
+        console.log('Criando tabelas...');
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -52,7 +80,7 @@ app.use(express.static('public'));
         const adminRes = await client.query('SELECT * FROM users WHERE username = $1', ['admin']);
         if (adminRes.rows.length === 0) {
             await client.query(
-                'INSERT INTO users (username, password, role, name, phone) VALUES ($1, $2, $3, $4, $5)',
+                'INSERT INTO users (username, password, role, name, phone) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (username) DO NOTHING',
                 ['admin', 'admin123', 'admin', 'Administrador', '123456789']
             );
             console.log('Usuário admin criado com sucesso');
@@ -61,11 +89,15 @@ app.use(express.static('public'));
         // Insere barbeiros padrão
         const barberRes = await client.query('SELECT * FROM barbers WHERE name = $1', ['João Silva']);
         if (barberRes.rows.length === 0) {
-            await client.query('INSERT INTO barbers (name) VALUES ($1)', ['João Silva']);
-            await client.query('INSERT INTO barbers (name) VALUES ($1)', ['Maria Santos']);
+            await client.query('INSERT INTO barbers (name) VALUES ($1) ON CONFLICT (name) DO NOTHING', ['João Silva']);
+            await client.query('INSERT INTO barbers (name) VALUES ($1) ON CONFLICT (name) DO NOTHING', ['Maria Santos']);
             console.log('Barbeiros padrão criados com sucesso');
         }
+
+        await client.query('COMMIT');
+        console.log('Tabelas e dados iniciais criados com sucesso');
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error('Erro ao criar tabelas ou inserir dados iniciais:', err);
     } finally {
         client.release();
@@ -91,7 +123,7 @@ app.post('/api/login', async (req, res) => {
         res.json({ id: result.rows[0].id, role: result.rows[0].role, username: result.rows[0].username });
     } catch (err) {
         console.error('Erro no login:', err);
-        res.status(500).json({ error: 'Erro no servidor' });
+        res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
 
@@ -116,7 +148,7 @@ app.post('/api/register', async (req, res) => {
         res.json({ message: 'Usuário registrado com sucesso' });
     } catch (err) {
         console.error('Erro ao registrar:', err);
-        res.status(500).json({ error: 'Erro no servidor' });
+        res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
 
@@ -149,7 +181,7 @@ app.get('/api/appointments', async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error('Erro ao buscar agendamentos:', err);
-        res.status(500).json({ error: 'Erro no servidor' });
+        res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
 
@@ -167,7 +199,7 @@ app.post('/api/appointments', async (req, res) => {
         res.json({ message: 'Agendamento criado com sucesso' });
     } catch (err) {
         console.error('Erro ao criar agendamento:', err);
-        res.status(500).json({ error: 'Erro no servidor' });
+        res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
 
@@ -181,13 +213,13 @@ app.get('/api/barbers', async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         console.error('Erro ao buscar barbeiros:', err);
-        res.status(500).json({ error: 'Erro no servidor' });
+        res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
 
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
-
 // Adicionar barbeiro
 app.post('/api/barbers', (req, res) => {
     const { name } = req.body;
