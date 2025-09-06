@@ -541,6 +541,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadBarbers();
 });
 
+
 // Marca um agendamento pelo admin
 async function createAdminAppointment() {
     const clientId = document.getElementById('admin-client-select').value;
