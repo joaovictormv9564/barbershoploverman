@@ -480,19 +480,26 @@ async function loadAppointments(barberId) {
 // Verificar disponibilidade de horário
 async function checkAppointmentAvailability(barberId, date, time) {
     try {
+        // Validar parâmetros
+        if (!barberId || !date || !time || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
+            console.error('Parâmetros inválidos:', { barberId, date, time });
+            alert('Selecione um barbeiro, data e horário válidos.');
+            return false;
+        }
+
         const response = await fetch(`/api/appointments/check?barber_id=${barberId}&date=${date}&time=${time}`);
         const data = await response.json();
         if (!response.ok) {
-            throw new Error(data.error || 'Erro ao verificar horário');
+            console.error('Erro na resposta do servidor:', response.status, data.error || 'Sem mensagem de erro');
+            throw new Error(data.error || 'Erro no servidor');
         }
         return !data.isBooked;
     } catch (error) {
-        console.error('Erro ao verificar horário:', error);
-        alert('Erro ao verificar horário: ' + error.message);
+        console.error('Erro ao verificar horário:', error.message, { barberId, date, time });
+        alert('Erro ao verificar horário. Verifique se selecionou um barbeiro e tente novamente.');
         return false;
     }
 }
-
 // Criar agendamento
 async function createAppointment(date, time, barberId, clientId) {
     try {
