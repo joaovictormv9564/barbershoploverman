@@ -434,20 +434,25 @@ async function loadAppointments(barberId) {
                     alert(`Horário ocupado: ${info.event.start.toLocaleString('pt-BR')}`);
                 },
                 dateClick: async function(info) {
-                    const date = info.dateStr.split('T')[0];
-                    const time = info.dateStr.split('T')[1].substring(0, 5);
-                    const isAvailable = await checkAppointmentAvailability(barberId, date, time);
-                    if (!isAvailable) {
-                        alert('Horário já ocupado. Escolha outro horário.');
-                        return;
-                    }
-                    const clientId = user.id; // Usa user.id do login
-                    if (!clientId) {
-                        alert('Faça login para agendar');
-                        return;
-                    }
-                    createAppointment(date, time, barberId, clientId);
-                }
+    const date = info.dateStr.split('T')[0];
+    const time = info.dateStr.split('T')[1].substring(0, 5);
+    const barberId = document.getElementById('barber-select').value;
+    if (!barberId) {
+        alert('Selecione um barbeiro primeiro.');
+        return;
+    }
+    const isAvailable = await checkAppointmentAvailability(barberId, date, time);
+    if (!isAvailable) {
+        alert('Horário já ocupado. Escolha outro horário.');
+        return;
+    }
+    const clientId = user.id; // Usa user.id do login
+    if (!clientId) {
+        alert('Faça login para agendar.');
+        return;
+    }
+    createAppointment(date, time, barberId, clientId);
+}
             });
             calendar.render();
         } else if (calendar && typeof calendar.getEvents === 'function') {
