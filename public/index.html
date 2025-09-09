@@ -32,20 +32,21 @@
         </div>
         <!-- Painel do Cliente -->
         <div id="client-section" style="display: none;">
-            <h2>Bem-vindo, <span id="client-username"></span></h2>
-            <select id="barber-select"></select>
-            <div id="calendar"></div>
-            <button onclick="logout()">Sair</button>
-        </div>
-        
-<div>
-    <label for="date-select">Data:</label>
-    <select id="date-select"></select>
+    <h2>Bem-vindo, <span id="client-username"></span></h2>
+    <select id="barber-select"></select>
+    <div>
+        <label for="date-select">Data:</label>
+        <select id="date-select"></select>
+    </div>
+    <div>
+        <label for="time-select">Horário:</label>
+        <select id="time-select"></select>
+    </div>
+    <button id="book-appointment">Agendar</button>
+    <div id="calendar"></div>
+    <button onclick="logout()">Sair</button>
 </div>
-<div>
-    <label for="time-select">Horário:</label>
-    <select id="time-select"></select>
-</div>
+
 <button id="book-appointment">Agendar</button>
 <div id="calendar"></div>
 
