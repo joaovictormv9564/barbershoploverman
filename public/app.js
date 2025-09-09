@@ -399,33 +399,10 @@ async function initializeAdminCalendar() {
     });
 }
     // Carrega agendamentos
-async function loadAppointments(barberId, isAdmin = false) {
-    try {
-        let url = '/api/appointments';
-        if (!isAdmin && user) {
-            url += `?client_id=${user.id}${barberId ? `&barber_id=${barberId}` : ''}`;
-        } else if (barberId) {
-            url += `?barber_id=${barberId}`;
-        }
-        console.log('Carregando agendamentos para barberId:', barberId, 'URL:', url);
-        const response = await fetch(url);
-        const appointments = await response.json();
-        console.log('Agendamentos recebidos:', appointments);
-        return appointments.map(appointment => ({
-            title: isAdmin 
-                ? `${appointment.barber_name} (${appointment.client_name || 'Sem nome'})`
-                : `Agendamento com ${appointment.barber_name}`,
-            start: `${appointment.date}T${appointment.time}`,
-            end: `${appointment.date}T${appointment.time}`,
-            id: appointment.id
-        }));
-    } catch (error) {
-        console.error('Erro ao carregar agendamentos:', error);
-        alert('Erro ao carregar agendamentos');
-        return [];
-    }
-}
-// Função para carregar agendamentos (manter o calendário com clique)
+let calendar; // Calendário do cliente
+
+
+// Carregar agendamentos para o cliente
 async function loadAppointments(barberId) {
     try {
         const response = await fetch(`/api/appointments?barber_id=${barberId}`);
@@ -434,12 +411,14 @@ async function loadAppointments(barberId) {
             throw new Error(appointments.error || 'Erro ao carregar agendamentos');
         }
         currentBarberId = barberId;
-        if (!calendar) {
-            const calendarEl = document.getElementById('calendar');
+        const calendarEl = document.getElementById('calendar');
+
+        // Inicializar o calendário se não existir
+        if (!calendar && calendarEl) {
             calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'timeGridWeek',
                 slotMinTime: '08:00:00',
-                slotMaxTime: '18:00:00',
+                slotMaxTime: '20:00:00',
                 slotDuration: '00:30:00',
                 allDaySlot: false,
                 events: appointments.map(appointment => ({
@@ -448,7 +427,8 @@ async function loadAppointments(barberId) {
                     backgroundColor: 'red',
                     borderColor: 'red',
                     textColor: 'white',
-                    editable: false
+                    editable: false,
+                    classNames: ['occupied']
                 })),
                 eventClick: function(info) {
                     alert(`Horário ocupado: ${info.event.start.toLocaleString('pt-BR')}`);
@@ -461,11 +441,17 @@ async function loadAppointments(barberId) {
                         alert('Horário já ocupado. Escolha outro horário.');
                         return;
                     }
-                    createAppointment(date, time, barberId, user.id); // Usa user.id do login
+                    const clientId = user.id; // Usa user.id do login
+                    if (!clientId) {
+                        alert('Faça login para agendar');
+                        return;
+                    }
+                    createAppointment(date, time, barberId, clientId);
                 }
             });
             calendar.render();
-        } else {
+        } else if (calendar && typeof calendar.getEvents === 'function') {
+            // Atualizar eventos se o calendário já existe
             calendar.getEvents().forEach(event => event.remove());
             appointments.forEach(appointment => {
                 calendar.addEvent({
@@ -474,9 +460,14 @@ async function loadAppointments(barberId) {
                     backgroundColor: 'red',
                     borderColor: 'red',
                     textColor: 'white',
-                    editable: false
+                    editable: false,
+                    classNames: ['occupied']
                 });
             });
+            calendar.render(); // Força re-renderização
+        } else {
+            console.warn('Calendário não inicializado ou getEvents não disponível');
+            return;
         }
         updateTimeSelect(); // Atualiza o select de horários
         console.log('Agendamentos do cliente carregados:', appointments);
@@ -534,7 +525,6 @@ async function updateTimeSelect() {
         return;
     }
 
-    // Gerar horários disponíveis
     const timeSlots = [];
     for (let hour = 8; hour < 18; hour++) {
         timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
@@ -561,21 +551,23 @@ async function updateTimeSelect() {
 // Carregar datas disponíveis (próximos 7 dias)
 function loadDates() {
     const dateSelect = document.getElementById('date-select');
-    dateSelect.innerHTML = '<option value="">Selecione uma data</option>';
-    const today = new Date();
-    for (let i = 0; i < 7; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
-        const option = document.createElement('option');
-        option.value = dateStr;
-        option.textContent = date.toLocaleDateString('pt-BR');
-        dateSelect.appendChild(option);
+    if (dateSelect) {
+        dateSelect.innerHTML = '<option value="">Selecione uma data</option>';
+        const today = new Date();
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
+            const option = document.createElement('option');
+            option.value = dateStr;
+            option.textContent = date.toLocaleDateString('pt-BR');
+            dateSelect.appendChild(option);
+        }
     }
 }
 
-// Configurar eventos do DOM (adicione apenas ao painel do cliente)
-if (document.getElementById('client-section')) { // Verificação para exibir apenas no painel do cliente
+// Configurar eventos do DOM (apenas no painel do cliente)
+if (document.getElementById('client-section')) {
     document.addEventListener('DOMContentLoaded', function() {
         const barberSelect = document.getElementById('barber-select');
         const dateSelect = document.getElementById('date-select');
@@ -609,7 +601,7 @@ if (document.getElementById('client-section')) { // Verificação para exibir ap
             if (barberId) {
                 loadAppointments(barberId);
             } else {
-                if (calendar) {
+                if (calendar && typeof calendar.getEvents === 'function') {
                     calendar.getEvents().forEach(event => event.remove());
                     calendar.destroy();
                     calendar = null;
@@ -620,9 +612,11 @@ if (document.getElementById('client-section')) { // Verificação para exibir ap
         });
 
         // Evento de mudança na data
-        dateSelect.addEventListener('change', function() {
-            updateTimeSelect();
-        });
+        if (dateSelect) {
+            dateSelect.addEventListener('change', function() {
+                updateTimeSelect();
+            });
+        }
 
         // Evento de clique no botão de agendamento
         if (bookButton) {
@@ -630,7 +624,7 @@ if (document.getElementById('client-section')) { // Verificação para exibir ap
                 const barberId = barberSelect.value;
                 const date = dateSelect.value;
                 const time = timeSelect.value;
-                const clientId = user.id; // Usa user.id do login (presume que user é global)
+                const clientId = user.id; // Usa user.id do login
                 if (!barberId || !date || !time || !clientId) {
                     alert('Selecione barbeiro, data, horário e faça login');
                     return;
