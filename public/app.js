@@ -259,7 +259,6 @@ function addMinutes(time, minutes) {
     const date = new Date(0, 0, 0, hours, mins + minutes);
     return date.toTimeString().slice(0, 5);
 }
-
 async function loadAppointments(barberId, isAdmin = false) {
     try {
         let url = '/api/appointments';
@@ -291,97 +290,6 @@ async function loadAppointments(barberId, isAdmin = false) {
         return [];
     }
 }
-
-async function initializeClientCalendar() {
-    const calendarEl = document.getElementById('calendar'); // Completa a linha
-    if (calendarEl) {
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridWeek',
-            slotMinTime: '08:00:00',
-            slotMaxTime: '20:00:00',
-            slotDuration: '00:30:00',
-            allDaySlot: false,
-            events: await loadAppointments(null, false),
-            dateClick: async function(info) {
-                const date = info.dateStr.split('T')[0];
-                const time = info.dateStr.split('T')[1].substring(0, 5);
-                const barberId = document.getElementById('barber-select').value;
-                if (!barberId) {
-                    alert('Selecione um barbeiro primeiro.');
-                    return;
-                }
-                const isAvailable = await checkAppointmentAvailability(barberId, date, time);
-                if (!isAvailable) {
-                    alert('Horário já ocupado. Escolha outro horário.');
-                    return;
-                }
-                const clientId = user.id;
-                if (!clientId) {
-                    alert('Faça login para agendar.');
-                    return;
-                }
-                createAppointment(date, time, barberId, clientId);
-            }
-        });
-        calendar.render();
-    }
-}
-
-// Lógica do painel do admin
-let adminCalendar; // Calendário do admin
-
-if (user && user.role === 'admin') {
-    document.getElementById('admin-section').style.display = 'block';
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const adminCalendarEl = document.getElementById('admin-calendar');
-        const viewSelect = document.getElementById('view-select');
-        const refreshButton = document.getElementById('refresh-events');
-
-        if (adminCalendarEl && viewSelect && refreshButton) {
-            adminCalendar = new FullCalendar.Calendar(adminCalendarEl, {
-                initialView: 'timeGridWeek',
-                slotMinTime: '08:00:00',
-                slotMaxTime: '20:00:00',
-                slotDuration: '00:30:00',
-                allDaySlot: false,
-                events: [],
-                dateClick: function(info) {
-                    alert('Visualização apenas. Use o painel do cliente para agendar.');
-                }
-            });
-            adminCalendar.render();
-
-            viewSelect.addEventListener('change', function() {
-                adminCalendar.changeView(this.value);
-            });
-
-            refreshButton.addEventListener('click', loadAdminEvents);
-            loadAdminEvents(); // Carrega eventos ao iniciar
-        } else {
-            console.error('Elementos do admin não encontrados:', { adminCalendarEl, viewSelect, refreshButton });
-        }
-    });
-
-    // Função para carregar eventos do admin
-    async function loadAdminEvents() {
-        try {
-            const appointments = await loadAppointments(null, true); // Usa loadAppointments com isAdmin=true
-            if (adminCalendar && typeof adminCalendar.getEvents === 'function') {
-                adminCalendar.getEvents().forEach(event => event.remove());
-                appointments.forEach(appointment => {
-                    adminCalendar.addEvent(appointment); // Adiciona eventos diretamente
-                });
-                adminCalendar.render();
-            }
-            console.log('Agendamentos do admin carregados:', appointments);
-        } catch (error) {
-            console.error('Erro ao carregar eventos:', error);
-            alert('Erro ao carregar eventos: ' + error.message);
-        }
-    }
-}
-
 async function initializeClientCalendar() {
     const calendarEl = document.getElementById('calendar');
     const barberSelect = document.getElementById('barber-select');
