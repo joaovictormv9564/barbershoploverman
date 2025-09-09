@@ -95,3 +95,23 @@ th {
     border-color: red !important;
     color: white !important;
 }
+@media only screen and (max-width: 600px) {
+    .fc .fc-timegrid-slot {
+        height: 2em !important;
+        min-height: 2em !important;
+    }
+    .fc-event {
+        font-size: 0.8em !important;
+        line-height: 1.2 !important;
+    }
+    #calendar {
+        width: 100% !important;
+        margin-top: 20px;
+    }
+    select, button {
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 8px;
+        box-sizing: border-box;
+    }
+}

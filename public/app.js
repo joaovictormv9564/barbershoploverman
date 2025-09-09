@@ -398,36 +398,249 @@ async function initializeAdminCalendar() {
         calendar.refetchEvents();
     });
 }
-    // Carrega agendamentos
-async function loadAppointments(barberId, isAdmin = false) {
+    let calendar; // Calendário do cliente
+let currentBarberId = null; // ID do barbeiro selecionado
+
+// Carregar agendamentos para o cliente
+async function loadAppointments(barberId) {
     try {
-        let url = '/api/appointments';
-        if (!isAdmin && user) {
-            url += `?client_id=${user.id}${barberId ? `&barber_id=${barberId}` : ''}`;
-        } else if (barberId) {
-            url += `?barber_id=${barberId}`;
-        }
-        console.log('Carregando agendamentos para barberId:', barberId, 'URL:', url);
-        const response = await fetch(url);
+        const response = await fetch(`/api/appointments?barber_id=${barberId}`);
         const appointments = await response.json();
-        console.log('Agendamentos recebidos:', appointments);
-        return appointments.map(appointment => ({
-            title: isAdmin 
-                ? `${appointment.barber_name} (${appointment.client_name || 'Sem nome'})`
-                : `Agendamento com ${appointment.barber_name}`,
-            start: `${appointment.date}T${appointment.time}`,
-            end: `${appointment.date}T${appointment.time}`,
-            id: appointment.id
-        }));
+        if (!response.ok) {
+            throw new Error(appointments.error || 'Erro ao carregar agendamentos');
+        }
+        currentBarberId = barberId;
+        // Inicializar o calendário
+        if (!calendar) {
+            const calendarEl = document.getElementById('calendar');
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                slotMinTime: '08:00:00',
+                slotMaxTime: '18:00:00',
+                slotDuration: '00:30:00',
+                allDaySlot: false,
+                events: appointments.map(appointment => ({
+                    title: 'Ocupado',
+                    start: `${appointment.date}T${appointment.time}`,
+                    backgroundColor: 'red',
+                    borderColor: 'red',
+                    textColor: 'white',
+                    editable: false,
+                    classNames: ['occupied'] // Adiciona classe para CSS
+                })),
+                eventClick: function(info) {
+                    alert(`Horário ocupado: ${info.event.start.toLocaleString('pt-BR')}`);
+                },
+                dateClick: async function(info) {
+                    const date = info.dateStr.split('T')[0];
+                    const time = info.dateStr.split('T')[1].substring(0, 5);
+                    const barberId = document.getElementById('barber-select').value;
+                    if (!barberId) {
+                        alert('Selecione um barbeiro primeiro');
+                        return;
+                    }
+                    const isAvailable = await checkAppointmentAvailability(barberId, date, time);
+                    if (!isAvailable) {
+                        alert('Horário já ocupado. Escolha outro horário.');
+                        return;
+                    }
+                    const clientId = localStorage.getItem('userId'); // Ajuste conforme sua lógica de login
+                    if (!clientId) {
+                        alert('Faça login para agendar');
+                        return;
+                    }
+                    createAppointment(date, time, barberId, clientId);
+                }
+            });
+            calendar.render();
+        } else {
+            // Atualizar eventos
+            calendar.getEvents().forEach(event => event.remove());
+            appointments.forEach(appointment => {
+                calendar.addEvent({
+                    title: 'Ocupado',
+                    start: `${appointment.date}T${appointment.time}`,
+                    backgroundColor: 'red',
+                    borderColor: 'red',
+                    textColor: 'white',
+                    editable: false,
+                    classNames: ['occupied']
+                });
+            });
+        }
+        // Atualizar horários disponíveis no select
+        updateTimeSelect();
+        console.log('Agendamentos do cliente carregados:', appointments);
     } catch (error) {
         console.error('Erro ao carregar agendamentos:', error);
-        alert('Erro ao carregar agendamentos');
-        return [];
+        alert('Erro ao carregar agendamentos: ' + error.message);
     }
 }
-// Presume que estas variáveis estão declaradas globalmente no seu app.js
+
+// Verificar disponibilidade de horário
+async function checkAppointmentAvailability(barberId, date, time) {
+    try {
+        const response = await fetch(`/api/appointments/check?barber_id=${barberId}&date=${date}&time=${time}`);
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao verificar horário');
+        }
+        return !data.isBooked;
+    } catch (error) {
+        console.error('Erro ao verificar horário:', error);
+        alert('Erro ao verificar horário: ' + error.message);
+        return false;
+    }
+}
+
+// Criar agendamento
+async function createAppointment(date, time, barberId, clientId) {
+    try {
+        const response = await fetch('/api/appointments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date, time, barber_id: barberId, client_id: clientId })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao criar agendamento');
+        }
+        alert(data.message);
+        loadAppointments(barberId); // Recarrega o calendário e o select de horários
+    } catch (error) {
+        console.error('Erro ao criar agendamento:', error);
+        alert('Erro ao criar agendamento: ' + error.message);
+    }
+}
+
+// Atualizar o select de horários disponíveis
+async function updateTimeSelect() {
+    const dateSelect = document.getElementById('date-select');
+    const timeSelect = document.getElementById('time-select');
+    const selectedDate = dateSelect.value;
+    const barberId = currentBarberId;
+
+    if (!selectedDate || !barberId) {
+        timeSelect.innerHTML = '<option value="">Selecione uma data primeiro</option>';
+        return;
+    }
+
+    // Gerar horários disponíveis (08:00 a 18:00, intervalos de 30 minutos)
+    const timeSlots = [];
+    for (let hour = 8; hour < 18; hour++) {
+        timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+        timeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+
+    timeSelect.innerHTML = '<option value="">Selecione um horário</option>';
+    for (const time of timeSlots) {
+        const response = await fetch(`/api/appointments/check?barber_id=${barberId}&date=${selectedDate}&time=${time}`);
+        const data = await response.json();
+        if (!response.ok) {
+            console.error('Erro ao verificar horário:', data.error);
+            continue;
+        }
+        if (!data.isBooked) {
+            const option = document.createElement('option');
+            option.value = time;
+            option.textContent = time;
+            timeSelect.appendChild(option);
+        }
+    }
+}
+
+// Carregar datas disponíveis (próximos 7 dias)
+function loadDates() {
+    const dateSelect = document.getElementById('date-select');
+    dateSelect.innerHTML = '<option value="">Selecione uma data</option>';
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        const option = document.createElement('option');
+        option.value = dateStr;
+        option.textContent = date.toLocaleDateString('pt-BR');
+        dateSelect.appendChild(option);
+    }
+}
+
+// Configurar eventos do DOM
+document.addEventListener('DOMContentLoaded', function() {
+    const barberSelect = document.getElementById('barber-select');
+    const dateSelect = document.getElementById('date-select');
+    const timeSelect = document.getElementById('time-select');
+    const bookButton = document.getElementById('book-appointment');
+
+    // Carregar barbeiros
+    async function loadBarbers() {
+        try {
+            const response = await fetch('/api/barbers');
+            const barbers = await response.json();
+            if (!response.ok) {
+                throw new Error(barbers.error || 'Erro ao carregar barbeiros');
+            }
+            barberSelect.innerHTML = '<option value="">Selecione um barbeiro</option>';
+            barbers.forEach(barber => {
+                const option = document.createElement('option');
+                option.value = barber.id;
+                option.textContent = barber.name;
+                barberSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Erro ao carregar barbeiros:', error);
+            alert('Erro ao carregar barbeiros: ' + error.message);
+        }
+    }
+
+    // Evento de mudança no barbeiro
+    barberSelect.addEventListener('change', function() {
+        const barberId = this.value;
+        if (barberId) {
+            loadAppointments(barberId);
+        } else {
+            if (calendar) {
+                calendar.getEvents().forEach(event => event.remove());
+                calendar.destroy();
+                calendar = null;
+            }
+            dateSelect.innerHTML = '<option value="">Selecione um barbeiro primeiro</option>';
+            timeSelect.innerHTML = '<option value="">Selecione uma data primeiro</option>';
+        }
+    });
+
+    // Evento de mudança na data
+    dateSelect.addEventListener('change', function() {
+        updateTimeSelect();
+    });
+
+    // Evento de clique no botão de agendamento
+    if (bookButton) {
+        bookButton.addEventListener('click', async function() {
+            const barberId = barberSelect.value;
+            const date = dateSelect.value;
+            const time = timeSelect.value;
+            const clientId = localStorage.getItem('userId');
+            if (!barberId || !date || !time || !clientId) {
+                alert('Selecione barbeiro, data, horário e faça login');
+                return;
+            }
+            const isAvailable = await checkAppointmentAvailability(barberId, date, time);
+            if (!isAvailable) {
+                alert('Horário já ocupado. Escolha outro horário.');
+                return;
+            }
+            createAppointment(date, time, barberId, clientId);
+        });
+    }
+
+    // Inicializar
+    loadBarbers();
+    loadDates();
+});
+
 let calendarAdmin; // Calendário do administrador
-let currentBarberId = null; // ID do barbeiro selecionado
+
 
 // Carregar agendamentos para o administrador
 async function loadAppointmentsAdmin(barberId) {
@@ -444,7 +657,7 @@ async function loadAppointmentsAdmin(barberId) {
             calendarAdmin = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'timeGridWeek',
                 slotMinTime: '08:00:00',
-                slotMaxTime: '18:00:00',
+                slotMaxTime: '19:00:00',
                 slotDuration: '00:30:00',
                 allDaySlot: false,
                 events: appointments.map(appointment => ({
