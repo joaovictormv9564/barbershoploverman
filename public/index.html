@@ -5,14 +5,82 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loverman Barbershop</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32"> <!-- Fallback -->
+    <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="manifest" href="/site.webmanifest">
-    <link rel="stylesheet" href="styles.css">
-</head>
-    <title>Loverman Barbershop</title>
-    <link rel="stylesheet" href="styles.css">
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Estilos adicionais para os novos controles */
+        .calendar-controls {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .calendar-controls select,
+        .calendar-controls button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+        }
+        
+        .calendar-controls button:hover {
+            background-color: #e9e9e9;
+        }
+        
+        .calendar-controls label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        #admin-calendar {
+            height: 600px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        /* Melhorias de layout para os selects */
+        .form-group {
+            margin: 10px 0;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            max-width: 300px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        /* Layout responsivo */
+        @media (max-width: 768px) {
+            .calendar-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .form-group select,
+            .form-group input {
+                max-width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -22,71 +90,161 @@
         <!-- Login -->
         <div id="login-section">
             <h2>Login</h2>
-            <input type="text" id="login-username" placeholder="Usuário">
-            <input type="password" id="login-password" placeholder="Senha">
+            <div class="form-group">
+                <input type="text" id="login-username" placeholder="Usuário">
+            </div>
+            <div class="form-group">
+                <input type="password" id="login-password" placeholder="Senha">
+            </div>
             <button onclick="login()">Entrar</button>
             <button onclick="showRegister()">Cadastrar</button>
         </div>
+
         <!-- Cadastro -->
         <div id="register-section" style="display: none;">
             <h2>Cadastro</h2>
-            <input type="text" id="register-username" placeholder="Usuário">
-            <input type="password" id="register-password" placeholder="Senha">
-            <input type="text" id="register-name" placeholder="Nome">
-            <input type="text" id="register-phone" placeholder="Telefone">
+            <div class="form-group">
+                <input type="text" id="register-username" placeholder="Usuário">
+            </div>
+            <div class="form-group">
+                <input type="password" id="register-password" placeholder="Senha">
+            </div>
+            <div class="form-group">
+                <input type="text" id="register-name" placeholder="Nome">
+            </div>
+            <div class="form-group">
+                <input type="text" id="register-phone" placeholder="Telefone">
+            </div>
             <button onclick="register()">Cadastrar</button>
             <button onclick="showLogin()">Voltar</button>
         </div>
+
         <!-- Painel do Cliente -->
         <div id="client-section" style="display: none;">
-    <h2>Bem-vindo, <span id="client-username"></span></h2>
-    <select id="barber-select"></select>
-    <div>
-        <label for="date-select">Data:</label>
-        <select id="date-select"></select>
-    </div>
-    <div>
-        <label for="time-select">Horário:</label>
-        <select id="time-select"></select>
-    </div>
-    <button id="book-appointment">Agendar</button>
-    <div id="calendar"></div>
-    <button onclick="logout()">Sair</button>
-</div>
+            <h2>Bem-vindo, <span id="client-username"></span></h2>
+            
+            <div class="form-group">
+                <label for="barber-select">Barbeiro:</label>
+                <select id="barber-select"></select>
+            </div>
+            
+            <div class="form-group">
+                <label for="date-select">Data:</label>
+                <select id="date-select"></select>
+            </div>
+            
+            <div class="form-group">
+                <label for="time-select">Horário:</label>
+                <select id="time-select"></select>
+            </div>
+            
+            <button id="book-appointment">Agendar</button>
+            
+            <h3>Calendário de Horários</h3>
+            <div id="calendar" style="height: 500px; margin: 20px 0;"></div>
+            
+            <button onclick="logout()">Sair</button>
+        </div>
 
+        <!-- Painel do Admin -->
+        <div id="admin-section" style="display: none;">
+            <h2>Painel do Administrador</h2>
+            
+            <!-- Gerenciamento de Barbeiros -->
+            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <h3>Adicionar Barbeiro</h3>
+                <div class="form-group">
+                    <input type="text" id="barber-name" placeholder="Nome do Barbeiro">
+                </div>
+                <button onclick="addBarber()">Adicionar</button>
+            </div>
+            
+            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <h3>Barbeiros Cadastrados</h3>
+                <table id="barbers-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f5f5f5;">
+                            <th style="padding: 10px; border: 1px solid #ddd;">ID</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Nome</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
 
+            <!-- Marcar Agendamento -->
+            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <h3>Marcar Agendamento</h3>
+                <div class="form-group">
+                    <label for="admin-client-select">Cliente:</label>
+                    <select id="admin-client-select">
+                        <option value="">Selecione um cliente</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="admin-barber-select">Barbeiro:</label>
+                    <select id="admin-barber-select">
+                        <option value="">Selecione um barbeiro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="admin-appointment-date">Data:</label>
+                    <input type="date" id="admin-appointment-date">
+                </div>
+                
+                <div class="form-group">
+                    <label for="admin-appointment-time">Horário:</label>
+                    <input type="time" id="admin-appointment-time" step="1800">
+                </div>
+                
+                <button onclick="createAdminAppointment()">Marcar Agendamento</button>
+            </div>
 
-       <!-- Painel do Admin -->
-<div id="admin-section" style="display: none;">
-    <h2>Painel do Administrador</h2>
-    <h3>Adicionar Barbeiro</h3>
-    <input type="text" id="barber-name" placeholder="Nome do Barbeiro">
-    <button onclick="addBarber()">Adicionar</button>
-    <h3>Barbeiros Cadastrados</h3>
-    <table id="barbers-table">  
-        <thead><tr><th>ID</th><th>Nome</th><th>Ações</th></tr></thead>
-        <tbody></tbody>
-    </table>
-    <h3>Marcar Agendamento</h3>
-    <select id="admin-client-select" style="width: 200px;">
-        <option value="">Selecione um cliente</option>
-    </select>
-    <select id="admin-barber-select" style="width: 200px;">
-        <option value="">Todos os barbeiros</option>
-    </select>
-    <input type="date" id="admin-appointment-date" style="width: 200px;">
-    <input type="time" id="admin-appointment-time" step="1800" style="width: 200px;">
-    <button onclick="createAdminAppointment()">Marcar Agendamento</button>
-    <h3>Visualizar Calendário de Agendamentos</h3> 
-    <div id="admin-calendar" style="height: 600px; margin: 20px 0;"></div> 
-    <h3>Clientes Cadastrados</h3>
-    <table id="clients-table">
-        <thead><tr><th>ID</th><th>Usuário</th><th>Nome</th><th>Telefone</th></tr></thead>
-        <tbody></tbody>
-    </table>
-    <button onclick="logout()">Sair</button>
-</div>
+            <!-- Calendário de Agendamentos -->
+            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <h3>Visualizar Calendário de Agendamentos</h3>
+                
+                <!-- Controles do Calendário -->
+                <div id="admin-calendar-controls" class="calendar-controls">
+                    <div>
+                        <label for="admin-view-select">Visualização:</label>
+                        <select id="admin-view-select">
+                            <option value="week">Semana</option>
+                            <option value="day">Dia</option>
+                        </select>
+                    </div>
+                    <button onclick="goToToday()">Hoje</button>
+                    <button onclick="goToPrevious()">← Anterior</button>
+                    <button onclick="goToNext()">Próximo →</button>
+                </div>
+                
+                <!-- Calendário -->
+                <div id="admin-calendar"></div>
+            </div>
+
+            <!-- Clientes Cadastrados -->
+            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <h3>Clientes Cadastrados</h3>
+                <table id="clients-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f5f5f5;">
+                            <th style="padding: 10px; border: 1px solid #ddd;">ID</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Usuário</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Nome</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Telefone</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <button onclick="logout()">Sair</button>
+        </div>
     </main>
+
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <script src="app.js"></script>
 </body>
