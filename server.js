@@ -125,7 +125,13 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciais inválidas' });
         }
         console.log('Usuário encontrado:', result.rows[0]);
-        res.json({ id: result.rows[0].id, role: result.rows[0].role, username: result.rows[0].username });
+        res.json({ 
+            id: result.rows[0].id, 
+            role: result.rows[0].role, 
+            username: result.rows[0].username,
+            name: result.rows[0].name,
+            phone: result.rows[0].phone
+        });
     } catch (err) {
         console.error('Erro no login:', err);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
@@ -254,32 +260,55 @@ app.delete('/api/barbers/:id', async (req, res) => {
     }
 });
 
-// Endpoint para listar agendamentos
+// Endpoint para listar agendamentos - CORRIGIDO
 app.get('/api/appointments', async (req, res) => {
-    const { barber_id, client_id } = req.query;
+    const { barber_id, client_id, date, all } = req.query;
+    
     let query = `
-        SELECT a.id, a.date, a.time, a.barber_id, a.client_id, b.name AS barber_name, u.name AS client_name
+        SELECT a.id, a.date, a.time, a.barber_id, a.client_id, 
+               b.name AS barber_name, u.name AS client_name, u.phone AS client_phone
         FROM appointments a
         JOIN barbers b ON a.barber_id = b.id
         JOIN users u ON a.client_id = u.id
     `;
+    
     const params = [];
-    if (barber_id && client_id) {
-        query += ` WHERE a.barber_id = $1 AND a.client_id = $2`;
-        params.push(barber_id, client_id);
-    } else if (barber_id) {
-        query += ` WHERE a.barber_id = $1`;
+    let whereClauses = [];
+    
+    if (barber_id) {
         params.push(barber_id);
-    } else if (client_id) {
-        query += ` WHERE a.client_id = $1`;
-        params.push(client_id);
+        whereClauses.push(`a.barber_id = $${params.length}`);
     }
+    
+    if (client_id) {
+        params.push(client_id);
+        whereClauses.push(`a.client_id = $${params.length}`);
+    }
+    
+    if (date) {
+        params.push(date);
+        whereClauses.push(`a.date = $${params.length}`);
+    }
+    
+    // NOVO: Parâmetro 'all' para forçar retorno de todos os agendamentos
+    if (all === 'true' && whereClauses.length === 0) {
+        // Se all=true e não há outros filtros, retorna tudo
+    } else if (whereClauses.length > 0) {
+        query += ` WHERE ${whereClauses.join(' AND ')}`;
+    } else if (all !== 'true') {
+        // Se não há filtros e all não é true, retorna vazio para evitar sobrecarga
+        return res.json([]);
+    }
+    
+    query += ` ORDER BY a.date, a.time`;
+    
     console.log('Executando query de agendamentos:', query, 'com params:', params);
+    
     try {
         const client = await pool.connect();
         const result = await client.query(query, params);
         client.release();
-        console.log('Agendamentos enviados:', result.rows);
+        console.log('Agendamentos encontrados:', result.rows.length);
         res.json(result.rows);
     } catch (err) {
         console.error('Erro ao buscar agendamentos:', err);
@@ -291,6 +320,11 @@ app.get('/api/appointments', async (req, res) => {
 app.get('/api/appointments/check', async (req, res) => {
     const { barber_id, date, time } = req.query;
     console.log('Verificando horário:', { barber_id, date, time });
+    
+    if (!barber_id || !date || !time) {
+        return res.status(400).json({ error: 'Parâmetros barber_id, date e time são obrigatórios' });
+    }
+    
     try {
         const client = await pool.connect();
         const result = await client.query(
@@ -298,12 +332,11 @@ app.get('/api/appointments/check', async (req, res) => {
             [barber_id, date, time]
         );
         client.release();
-        if (result.rows.length > 0) {
-            console.log('Horário ocupado:', { barber_id, date, time });
-            return res.json({ isBooked: true });
-        }
-        console.log('Horário disponível:', { barber_id, date, time });
-        res.json({ isBooked: false });
+        
+        res.json({ 
+            isBooked: result.rows.length > 0,
+            appointment: result.rows.length > 0 ? result.rows[0] : null
+        });
     } catch (err) {
         console.error('Erro ao verificar horário:', err);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
@@ -314,24 +347,41 @@ app.get('/api/appointments/check', async (req, res) => {
 app.post('/api/appointments', async (req, res) => {
     const { date, time, barber_id, client_id } = req.body;
     console.log('Tentativa de criar agendamento:', { date, time, barber_id, client_id });
+    
+    if (!date || !time || !barber_id || !client_id) {
+        return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+    }
+    
     try {
         const client = await pool.connect();
+        
+        // Verificar se o horário já está ocupado
         const checkResult = await client.query(
             'SELECT * FROM appointments WHERE barber_id = $1 AND date = $2 AND time = $3',
             [barber_id, date, time]
         );
+        
         if (checkResult.rows.length > 0) {
             client.release();
             console.log('Horário já ocupado:', { barber_id, date, time });
-            return res.status(400).json({ error: 'Horário já ocupado' });
+            return res.status(400).json({ 
+                error: 'Horário já ocupado',
+                existingAppointment: checkResult.rows[0]
+            });
         }
+        
+        // Criar o agendamento
         const result = await client.query(
             'INSERT INTO appointments (date, time, barber_id, client_id) VALUES ($1, $2, $3, $4) RETURNING id',
             [date, time, barber_id, client_id]
         );
+        
         client.release();
         console.log('Agendamento criado com ID:', result.rows[0].id);
-        res.json({ message: 'Agendamento criado com sucesso' });
+        res.json({ 
+            message: 'Agendamento criado com sucesso',
+            appointmentId: result.rows[0].id
+        });
     } catch (err) {
         console.error('Erro ao criar agendamento:', err);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
@@ -342,19 +392,70 @@ app.post('/api/appointments', async (req, res) => {
 app.delete('/api/appointments/:id', async (req, res) => {
     const { id } = req.params;
     console.log('Tentativa de deletar agendamento:', { id });
+    
     try {
         const client = await pool.connect();
-        const result = await client.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [id]);
+        const result = await client.query(
+            'DELETE FROM appointments WHERE id = $1 RETURNING id, barber_id, date, time',
+            [id]
+        );
+        
         client.release();
+        
         if (result.rowCount === 0) {
             console.log('Agendamento não encontrado:', id);
             return res.status(404).json({ error: 'Agendamento não encontrado' });
         }
-        console.log('Agendamento deletado com sucesso:', id);
-        res.json({ message: 'Agendamento deletado com sucesso' });
+        
+        const deletedAppointment = result.rows[0];
+        console.log('Agendamento deletado com sucesso:', deletedAppointment);
+        
+        res.json({ 
+            message: 'Agendamento deletado com sucesso',
+            deletedAppointment: deletedAppointment
+        });
     } catch (err) {
         console.error('Erro ao deletar agendamento:', err);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
+    }
+});
+
+// NOVO: Endpoint para buscar agendamentos por data e barbeiro
+app.get('/api/appointments/by-date', async (req, res) => {
+    const { barber_id, date } = req.query;
+    
+    if (!barber_id || !date) {
+        return res.status(400).json({ error: 'Parâmetros barber_id e date são obrigatórios' });
+    }
+    
+    try {
+        const client = await pool.connect();
+        const result = await client.query(
+            `SELECT a.time, u.name AS client_name 
+             FROM appointments a 
+             JOIN users u ON a.client_id = u.id 
+             WHERE a.barber_id = $1 AND a.date = $2 
+             ORDER BY a.time`,
+            [barber_id, date]
+        );
+        
+        client.release();
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Erro ao buscar agendamentos por data:', err);
+        res.status(500).json({ error: 'Erro no servidor', details: err.message });
+    }
+});
+
+// Endpoint para health check
+app.get('/api/health', async (req, res) => {
+    try {
+        const client = await pool.connect();
+        await client.query('SELECT 1');
+        client.release();
+        res.json({ status: 'OK', database: 'connected' });
+    } catch (err) {
+        res.status(500).json({ status: 'ERROR', database: 'disconnected', error: err.message });
     }
 });
 
