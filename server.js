@@ -259,20 +259,27 @@ app.delete('/api/barbers/:id', async (req, res) => {
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
-
-// Endpoint para listar agendamentos - Versão Simplificada
-app.get('/api/appointments', async (req, res) => {
-    const { barber_id, client_id, date } = req.query;
+function isAdmin(req, res, next) {
+    idade
+    const isAdminUser = req.query.isAdmin === 'true' || req.headers['x-is-admin'] === 'true';
     
-    // Determinar se é admin baseado no client_id vs parâmetros
-    const isAdminRequest = client_id && client_id !== 'undefined';
+    if (isAdminUser) {
+        next();
+    } else {
+        res.status(403).json({ error: 'Acesso não autorizado' });
+    }
+}
+// Endpoint para listar agendamentos 
+app.get('/api/appointments', async (req, res) => {
+    const { barber_id, client_id, date, all, isAdmin } = req.query;
     
     let query = `
         SELECT a.id, a.date, a.time, a.barber_id, a.client_id, 
                b.name AS barber_name
     `;
     
-    if (isAdminRequest) {
+    // Somente admins veem informações do cliente
+    if (isAdmin === 'true') {
         query += `, u.name AS client_name, u.phone AS client_phone`;
     } else {
         query += `, 'Cliente' AS client_name, '' AS client_phone`;
@@ -282,37 +289,29 @@ app.get('/api/appointments', async (req, res) => {
         FROM appointments a
         JOIN barbers b ON a.barber_id = b.id
         JOIN users u ON a.client_id = u.id
-        WHERE a.barber_id = $1
     `;
     
-    const params = [barber_id];
+    const params = [];
+    let whereClauses = [];
+    
+    if (barber_id) {
+        params.push(barber_id);
+        whereClauses.push(`a.barber_id = $${params.length}`);
+    }
+    
+    if (client_id && isAdmin === 'true') {
+        // Somente admins podem filtrar por client_id
+        params.push(client_id);
+        whereClauses.push(`a.client_id = $${params.length}`);
+    }
     
     if (date) {
         params.push(date);
-        query += ` AND a.date = $${params.length}`;
+        whereClauses.push(`a.date = $${params.length}`);
     }
     
-    query += ` ORDER BY a.date, a.time`;
-    
-    try {
-        const client = await pool.connect();
-        const result = await client.query(query, params);
-        client.release();
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Erro ao buscar agendamentos:', err);
-        res.status(500).json({ error: 'Erro no servidor' });
-    }
-});
-    
-    // NOVO: Parâmetro 'all' para forçar retorno de todos os agendamentos
-    if (all === 'true' && whereClauses.length === 0) {
-        // Se all=true e não há outros filtros, retorna tudo
-    } else if (whereClauses.length > 0) {
+    if (whereClauses.length > 0) {
         query += ` WHERE ${whereClauses.join(' AND ')}`;
-    } else if (all !== 'true') {
-        // Se não há filtros e all não é true, retorna vazio para evitar sobrecarga
-        return res.json([]);
     }
     
     query += ` ORDER BY a.date, a.time`;
@@ -329,10 +328,11 @@ app.get('/api/appointments', async (req, res) => {
         console.error('Erro ao buscar agendamentos:', err);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
+});
 
 // Endpoint para verificar se horário está ocupado
 app.get('/api/appointments/check', async (req, res) => {
-    const { barber_id, date, time } = req.query;
+    const { barber_id, date, time, isAdmin } = req.query;
     console.log('Verificando horário:', { barber_id, date, time });
     
     if (!barber_id || !date || !time) {
@@ -347,9 +347,20 @@ app.get('/api/appointments/check', async (req, res) => {
         );
         client.release();
         
+        const isBooked = result.rows.length > 0;
+        let appointmentInfo = null;
+        
+        if (isBooked && isAdmin === 'true') {
+            // Somente admins veem detalhes do agendamento
+            appointmentInfo = result.rows[0];
+        } else if (isBooked) {
+            // Clientes só sabem que está ocupado, sem detalhes
+            appointmentInfo = { isBooked: true };
+        }
+        
         res.json({ 
-            isBooked: result.rows.length > 0,
-            appointment: result.rows.length > 0 ? result.rows[0] : null
+            isBooked: isBooked,
+            appointment: appointmentInfo
         });
     } catch (err) {
         console.error('Erro ao verificar horário:', err);
@@ -434,8 +445,8 @@ app.delete('/api/appointments/:id', async (req, res) => {
     }
 });
 
-// NOVO: Endpoint para buscar agendamentos por data e barbeiro
-app.get('/api/appointments/by-date', async (req, res) => {
+// NOVO: Endpoint para buscar agendamentos por data e barbeiro (sem informações de cliente)
+app.get('/api/appointments/simple', async (req, res) => {
     const { barber_id, date } = req.query;
     
     if (!barber_id || !date) {
@@ -445,31 +456,21 @@ app.get('/api/appointments/by-date', async (req, res) => {
     try {
         const client = await pool.connect();
         const result = await client.query(
-            `SELECT a.time, u.name AS client_name 
+            `SELECT a.time 
              FROM appointments a 
-             JOIN users u ON a.client_id = u.id 
              WHERE a.barber_id = $1 AND a.date = $2 
              ORDER BY a.time`,
             [barber_id, date]
         );
         
         client.release();
-        res.json(result.rows);
+        
+        // Retorna apenas os horários ocupados
+        const occupiedTimes = result.rows.map(row => row.time);
+        res.json(occupiedTimes);
     } catch (err) {
         console.error('Erro ao buscar agendamentos por data:', err);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
-    }
-});
-
-// Endpoint para health check
-app.get('/api/health', async (req, res) => {
-    try {
-        const client = await pool.connect();
-        await client.query('SELECT 1');
-        client.release();
-        res.json({ status: 'OK', database: 'connected' });
-    } catch (err) {
-        res.status(500).json({ status: 'ERROR', database: 'disconnected', error: err.message });
     }
 });
 

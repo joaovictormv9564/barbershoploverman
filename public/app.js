@@ -268,19 +268,7 @@ function addMinutes(time, minutes) {
 
 async function loadAppointments(barberId, isAdmin = false) {
     try {
-        let url = '/api/appointments';
-        // REMOVER a filtragem por client_id para usuários não-admin
-        if (isAdmin) {
-            // Para admin, podemos filtrar por barbeiro se necessário
-            if (barberId) {
-                url += `?barber_id=${barberId}`;
-            }
-        } else {
-            // Para clientes, mostrar TODOS os agendamentos do barbeiro selecionado
-            if (barberId) {
-                url += `?barber_id=${barberId}`;
-            }
-        }
+        let url = `/api/appointments?barber_id=${barberId}&isAdmin=${isAdmin}`;
         
         const response = await fetch(url);
         if (!response.ok) {
@@ -289,7 +277,9 @@ async function loadAppointments(barberId, isAdmin = false) {
         
         const appointments = await response.json();
         return appointments.map(appointment => ({
-            title: isAdmin ? `${appointment.barber_name} - ${appointment.client_name}` : 'Horário Ocupado',
+            title: isAdmin ? 
+                `${appointment.barber_name} - ${appointment.client_name}` : 
+                'Horário Ocupado',
             start: `${appointment.date}T${appointment.time}`,
             end: `${appointment.date}T${addMinutes(appointment.time, 30)}`,
             id: appointment.id,
@@ -311,6 +301,78 @@ async function loadAppointments(barberId, isAdmin = false) {
     }
 }
 
+async function checkAppointmentAvailability(barberId, date, time) {
+    try {
+        const isAdmin = user && user.role === 'admin';
+        const response = await fetch(
+            `/api/appointments/check?barber_id=${barberId}&date=${date}&time=${time}&isAdmin=${isAdmin}`
+        );
+        const data = await response.json();
+        return !data.isBooked;
+    } catch (error) {
+        console.error('Erro ao verificar disponibilidade:', error);
+        return false;
+    }
+}
+
+// Função para carregar horários ocupados (apenas horários, sem informações)
+async function loadOccupiedTimes(barberId, date) {
+    try {
+        const response = await fetch(
+            `/api/appointments/simple?barber_id=${barberId}&date=${date}`
+        );
+        if (response.ok) {
+            return await response.json();
+        }
+        return [];
+    } catch (error) {
+        console.error('Erro ao carregar horários ocupados:', error);
+        return [];
+    }
+}
+
+// Atualizar a função updateTimeSelect
+async function updateTimeSelect() {
+    const dateSelect = document.getElementById('date-select');
+    const timeSelect = document.getElementById('time-select');
+    const barberSelect = document.getElementById('barber-select');
+    
+    const selectedDate = dateSelect.value;
+    const barberId = barberSelect.value;
+
+    if (!selectedDate || !barberId) {
+        timeSelect.innerHTML = '<option value="">Selecione data e barbeiro</option>';
+        return;
+    }
+
+    try {
+        timeSelect.innerHTML = '<option value="">Carregando...</option>';
+        
+        // Carregar horários ocupados
+        const occupiedTimes = await loadOccupiedTimes(barberId, selectedDate);
+        
+        // Gerar todos os horários possíveis
+        const timeSlots = [];
+        for (let hour = 8; hour < 20; hour++) {
+            timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+            timeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+        }
+
+        // Filtrar horários disponíveis
+        timeSelect.innerHTML = '<option value="">Selecione um horário</option>';
+        for (const time of timeSlots) {
+            if (!occupiedTimes.includes(time)) {
+                const option = document.createElement('option');
+                option.value = time;
+                option.textContent = time;
+                timeSelect.appendChild(option);
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar horários:', error);
+        timeSelect.innerHTML = '<option value="">Erro ao carregar</option>';
+    }
+}
 // Inicializa o calendário do cliente
 async function initializeClientCalendar() {
     const calendarEl = document.getElementById('calendar');
