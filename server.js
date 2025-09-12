@@ -260,7 +260,7 @@ app.delete('/api/barbers/:id', async (req, res) => {
     }
 });
 
-// Endpoint para listar agendamentos - CORRIGIDO
+// Endpoint para listar agendamentos - 
 app.get('/api/appointments', async (req, res) => {
     const { barber_id, client_id, date, all } = req.query;
     
@@ -278,11 +278,6 @@ app.get('/api/appointments', async (req, res) => {
     if (barber_id) {
         params.push(barber_id);
         whereClauses.push(`a.barber_id = $${params.length}`);
-    }
-    
-    if (client_id) {
-        params.push(client_id);
-        whereClauses.push(`a.client_id = $${params.length}`);
     }
     
     if (date) {
