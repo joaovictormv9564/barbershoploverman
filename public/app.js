@@ -269,10 +269,17 @@ function addMinutes(time, minutes) {
 async function loadAppointments(barberId, isAdmin = false) {
     try {
         let url = '/api/appointments';
-        if (!isAdmin && user) {
-            url += `?client_id=${user.id}${barberId ? `&barber_id=${barberId}` : ''}`;
-        } else if (barberId) {
-            url += `?barber_id=${barberId}`;
+        // REMOVER a filtragem por client_id para usuários não-admin
+        if (isAdmin) {
+            // Para admin, podemos filtrar por barbeiro se necessário
+            if (barberId) {
+                url += `?barber_id=${barberId}`;
+            }
+        } else {
+            // Para clientes, mostrar TODOS os agendamentos do barbeiro selecionado
+            if (barberId) {
+                url += `?barber_id=${barberId}`;
+            }
         }
         
         const response = await fetch(url);
@@ -506,6 +513,10 @@ async function updateTimeSelect() {
     try {
         timeSelect.innerHTML = '<option value="">Carregando...</option>';
         
+        // Primeiro, carregar todos os agendamentos do barbeiro na data selecionada
+        const appointmentsResponse = await fetch(`/api/appointments?barber_id=${barberId}&date=${selectedDate}`);
+        const appointments = await appointmentsResponse.json();
+        
         // Gerar todos os horários possíveis
         const timeSlots = [];
         for (let hour = 8; hour < 20; hour++) {
@@ -516,8 +527,12 @@ async function updateTimeSelect() {
         // Verificar disponibilidade de cada horário
         timeSelect.innerHTML = '<option value="">Selecione um horário</option>';
         for (const time of timeSlots) {
-            const isAvailable = await checkAppointmentAvailability(barberId, selectedDate, time);
-            if (isAvailable) {
+            // Verificar se o horário está ocupado
+            const isOccupied = appointments.some(appointment => 
+                appointment.date === selectedDate && appointment.time === time
+            );
+            
+            if (!isOccupied) {
                 const option = document.createElement('option');
                 option.value = time;
                 option.textContent = time;

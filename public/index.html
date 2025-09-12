@@ -80,6 +80,26 @@
                 max-width: 100%;
             }
         }
+    /* Estilo para horários ocupados no calendário */
+    .occupied {
+        background-color: #ff4444 !important;
+        border-color: #cc0000 !important;
+        color: white !important;
+        cursor: not-allowed !important;
+    }
+    
+    .occupied:hover {
+        background-color: #ff6666 !important;
+    }
+    
+    /* Estilo para horários disponíveis no calendário */
+    .fc-time-grid .fc-slats td {
+        background-color: #f8fff8; /* verde muito claro */
+    }
+    
+    .fc-time-grid .fc-slats .fc-disabled {
+        background-color: #fff8f8; /* vermelho muito claro */
+    }
     </style>
 </head>
 <body>
