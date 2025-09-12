@@ -56,14 +56,14 @@
 
 
 
-        <!-- Painel do Admin -->
-        <div id="admin-section" style="display: none;">
+       <!-- Painel do Admin -->
+<div id="admin-section" style="display: none;">
     <h2>Painel do Administrador</h2>
     <h3>Adicionar Barbeiro</h3>
     <input type="text" id="barber-name" placeholder="Nome do Barbeiro">
     <button onclick="addBarber()">Adicionar</button>
     <h3>Barbeiros Cadastrados</h3>
-    <table id="barbers-table">
+    <table id="barbers-table">  
         <thead><tr><th>ID</th><th>Nome</th><th>Ações</th></tr></thead>
         <tbody></tbody>
     </table>
@@ -77,6 +77,8 @@
     <input type="date" id="admin-appointment-date" style="width: 200px;">
     <input type="time" id="admin-appointment-time" step="1800" style="width: 200px;">
     <button onclick="createAdminAppointment()">Marcar Agendamento</button>
+    <h3>Visualizar Calendário de Agendamentos</h3> 
+    <div id="admin-calendar" style="height: 600px; margin: 20px 0;"></div> 
     <h3>Clientes Cadastrados</h3>
     <table id="clients-table">
         <thead><tr><th>ID</th><th>Usuário</th><th>Nome</th><th>Telefone</th></tr></thead>

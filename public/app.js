@@ -348,55 +348,87 @@ async function initializeClientCalendar() {
 async function initializeAdminCalendar() {
     const calendarEl = document.getElementById('admin-calendar');
     const barberSelect = document.getElementById('admin-barber-select');
-    if (!calendarEl || !barberSelect) {
-        console.error('Elementos admin-calendar ou admin-barber-select não encontrados');
-        alert('Erro: Elementos do calendário não encontrados');
-        return;
-    }
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'timeGridWeek',
-        slotMinTime: '08:00:00',
-        slotMaxTime: '20:00:00',
-        slotDuration: '00:30:00',
-        events: async function(fetchInfo, successCallback, failureCallback) {
-            try {
-                const barberId = barberSelect.value;
-                const events = await loadAppointments(barberId, true);
-                successCallback(events);
-            } catch (error) {
-                console.error('Erro ao carregar eventos:', error);
-                failureCallback(error);
-            }
-        },
-        eventClick: async function (info) {
-            if (confirm(`Deseja remover o agendamento ID ${info.event.id}?`)) {
-                try {
-                    const response = await fetch(`/api/appointments/${info.event.id}`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    const data = await response.json();
-                    if (data.error) {
-                        alert(data.error);
+}
+// Lógica do painel do admin
+let adminCalendar; // Calendário do admin
+
+if (user && user.role === 'admin') {
+    document.getElementById('admin-section').style.display = 'block';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const adminCalendarEl = document.getElementById('admin-calendar');
+        const viewSelect = document.getElementById('view-select');
+        const refreshButton = document.getElementById('refresh-events');
+        const barberSelectAdmin = document.getElementById('barber-select-admin');
+
+        if (adminCalendarEl && viewSelect && refreshButton && barberSelectAdmin) {
+            let adminCalendar = new FullCalendar.Calendar(adminCalendarEl, {
+                initialView: 'timeGridWeek',
+                slotMinTime: '08:00:00',
+                slotMaxTime: '18:00:00',
+                slotDuration: '00:30:00',
+                allDaySlot: false,
+                events: [],
+                dateClick: async function(info) {
+                    const date = info.dateStr.split('T')[0];
+                    const time = info.dateStr.split('T')[1].substring(0, 5);
+                    const barberId = barberSelectAdmin.value;
+                    if (!barberId) {
+                        alert('Selecione um barbeiro primeiro.');
                         return;
                     }
-                    alert('Agendamento removido com sucesso');
-                    info.event.remove();
-                } catch (error) {
-                    console.error('Erro ao remover agendamento:', error);
-                    alert('Erro ao remover agendamento');
+                    const isAvailable = await checkAppointmentAvailability(barberId, date, time);
+                    if (!isAvailable) {
+                        alert('Horário já ocupado. Escolha outro horário.');
+                        return;
+                    }
+                    const clientId = prompt('Digite o ID do cliente para agendar:');
+                    if (!clientId || isNaN(clientId)) {
+                        alert('ID do cliente inválido.');
+                        return;
+                    }
+                    createAppointment(date, time, barberId, clientId);
                 }
-            }
+            });
+            adminCalendar.render();
+
+            adminViewSelect.addEventListener('change', () => {
+                if (adminCalendar) adminCalendar.changeView(adminViewSelect.value);
+            });
+
+            refreshButton.addEventListener('click', loadAdminEvents);
+            loadAdminEvents(); // Carrega eventos ao iniciar
+        } else {
+            console.error('Elementos do admin não encontrados:', { adminCalendarEl, adminViewSelect, refreshButton, barberSelectAdmin });
         }
-        
     });
+
+    // Função para carregar eventos do admin
+    async function loadAdminEvents() {
+        try {
+            const appointments = await loadAppointments(null, true); // Usa loadAppointments com isAdmin=true
+            if (adminCalendar && typeof adminCalendar.getEvents === 'function') {
+                adminCalendar.getEvents().forEach(event => event.remove());
+                appointments.forEach(appointment => {
+                    adminCalendar.addEvent(appointment); // Adiciona eventos diretamente
+                });
+                adminCalendar.render();
+            }
+            console.log('Agendamentos do admin carregados:', appointments);
+        } catch (error) {
+            console.error('Erro ao carregar eventos:', error);
+            alert('Erro ao carregar eventos: ' + error.message);
+        }
+    }
+}
+
     calendar.render();
     
     // Recarrega agendamentos quando o barbeiro é selecionado
     barberSelect.addEventListener('change', () => {
         calendar.refetchEvents();
     });
-}
+
     // Carrega agendamentos
 let calendar; // Calendário do cliente
 
@@ -724,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const barberSelect = document.getElementById('barber-select');
     const viewSelect = document.getElementById('calendar-view');
 
-    // Carregar barbeiros (supondo que já existe no seu código)
+    // Carregar barbeiros para o admin
     async function loadBarbers() {
         try {
             const response = await fetch('/api/barbers');
