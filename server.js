@@ -260,30 +260,50 @@ app.delete('/api/barbers/:id', async (req, res) => {
     }
 });
 
-// Endpoint para listar agendamentos - 
+// Endpoint para listar agendamentos - Versão Simplificada
 app.get('/api/appointments', async (req, res) => {
-    const { barber_id, client_id, date, all } = req.query;
+    const { barber_id, client_id, date } = req.query;
+    
+    // Determinar se é admin baseado no client_id vs parâmetros
+    const isAdminRequest = client_id && client_id !== 'undefined';
     
     let query = `
         SELECT a.id, a.date, a.time, a.barber_id, a.client_id, 
-               b.name AS barber_name, u.name AS client_name, u.phone AS client_phone
+               b.name AS barber_name
+    `;
+    
+    if (isAdminRequest) {
+        query += `, u.name AS client_name, u.phone AS client_phone`;
+    } else {
+        query += `, 'Cliente' AS client_name, '' AS client_phone`;
+    }
+    
+    query += `
         FROM appointments a
         JOIN barbers b ON a.barber_id = b.id
         JOIN users u ON a.client_id = u.id
+        WHERE a.barber_id = $1
     `;
     
-    const params = [];
-    let whereClauses = [];
-    
-    if (barber_id) {
-        params.push(barber_id);
-        whereClauses.push(`a.barber_id = $${params.length}`);
-    }
+    const params = [barber_id];
     
     if (date) {
         params.push(date);
-        whereClauses.push(`a.date = $${params.length}`);
+        query += ` AND a.date = $${params.length}`;
     }
+    
+    query += ` ORDER BY a.date, a.time`;
+    
+    try {
+        const client = await pool.connect();
+        const result = await client.query(query, params);
+        client.release();
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Erro ao buscar agendamentos:', err);
+        res.status(500).json({ error: 'Erro no servidor' });
+    }
+});
     
     // NOVO: Parâmetro 'all' para forçar retorno de todos os agendamentos
     if (all === 'true' && whereClauses.length === 0) {
@@ -309,7 +329,6 @@ app.get('/api/appointments', async (req, res) => {
         console.error('Erro ao buscar agendamentos:', err);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
-});
 
 // Endpoint para verificar se horário está ocupado
 app.get('/api/appointments/check', async (req, res) => {
