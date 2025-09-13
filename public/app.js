@@ -663,30 +663,7 @@ async function initializeAdminCalendar() {
             center: 'title',
             right: 'timeGridDay,timeGridWeek'
         },
-        // Melhorias para mobile
-        allDaySlot: false,
-        dayMaxEvents: true,
-        height: 'auto',
-        contentHeight: 'auto',
         
-        // Ajustes de visualização mobile
-        views: {
-            timeGridWeek: {
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                },
-                dayHeaderFormat: { weekday: 'short', day: 'numeric' }
-            },
-            timeGridDay: {
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                }
-            }
-        },
         events: async (info, successCallback) => {
             const barberId = barberSelect.value;
             const events = await loadAppointments(barberId, true);
