@@ -1,15 +1,92 @@
 {
   "name": "Loverman Barbershop",
   "short_name": "Loverman",
+  "description": "Agendamento de serviços de barbearia - Estilo e qualidade",
   "icons": [
     {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "theme_color": "#000000",
-  "background_color": "#FFFF00",
+  "background_color": "#0a0a0a",
   "display": "standalone",
-  "start_url": "/"
+  "scope": "/",
+  "start_url": "/",
+  "orientation": "portrait",
+  "categories": ["business", "lifestyle"],
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "375x667",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Tela inicial do Loverman Barbershop no mobile"
+    },
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Tela de agendamento do Loverman Barbershop"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Novo Agendamento",
+      "short_name": "Agendar",
+      "description": "Fazer um novo agendamento",
+      "url": "/?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "/shortcut-icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Meus Agendamentos",
+      "short_name": "Agendamentos",
+      "description": "Ver meus agendamentos",
+      "url": "/client-section?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "/shortcut-calendar-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+loverman",
+      "url": "/?url=%s"
+    }
+  ]
 }

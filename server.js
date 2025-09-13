@@ -354,7 +354,7 @@ app.get('/api/appointments/check', async (req, res) => {
             // Somente admins veem detalhes do agendamento
             appointmentInfo = result.rows[0];
         } else if (isBooked) {
-            // Clientes só sabem que está ocupado, sem detalhes
+            
             appointmentInfo = { isBooked: true };
         }
         
@@ -445,7 +445,7 @@ app.delete('/api/appointments/:id', async (req, res) => {
     }
 });
 
-// NOVO: Endpoint para buscar agendamentos por data e barbeiro (sem informações de cliente)
+// Endpoint para buscar agendamentos por data e barbeiro (sem informações de cliente)
 app.get('/api/appointments/simple', async (req, res) => {
     const { barber_id, date } = req.query;
     
