@@ -504,3 +504,170 @@ select:focus-visible {
     }
 }
 
+/* MELHORIAS ESPECÍFICAS PARA O CALENDÁRIO MOBILE */
+@media (max-width: 768px) {
+    /* Calendário com altura total */
+    #calendar, #admin-calendar {
+        height: 80vh !important;
+        min-height: 600px;
+        max-height: 800px;
+    }
+    
+    /* Cabeçalhos dos dias melhorados */
+    .fc .fc-col-header-cell {
+        padding: 10px 5px !important;
+    }
+    
+    .fc .fc-col-header-cell-cushion {
+        font-size: 0.9em !important;
+        padding: 5px 2px !important;
+        white-space: normal !important;
+        line-height: 1.2;
+        text-align: center;
+    }
+    
+    /* Horários com melhor visualização */
+    .fc .fc-timegrid-slot {
+        height: 2.8em !important;
+        min-height: 2.8em !important;
+    }
+    
+    .fc .fc-timegrid-slot-label {
+        padding: 5px 3px !important;
+    }
+    
+    .fc .fc-timegrid-slot-label-cushion {
+        font-size: 0.85em !important;
+        font-weight: 600;
+    }
+    
+    /* Eventos maiores */
+    .fc-event {
+        font-size: 0.9em !important;
+        padding: 6px 4px !important;
+        margin: 2px 1px;
+        line-height: 1.3 !important;
+        min-height: 28px;
+    }
+    
+    /* Toolbar simplificada */
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px 0;
+    }
+    
+    .fc .fc-toolbar-title {
+        font-size: 1.3em !important;
+        order: -1;
+        text-align: center;
+        margin: 5px 0;
+    }
+    
+    .fc .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .fc .fc-button {
+        padding: 10px 12px !important;
+        font-size: 0.9em !important;
+        min-width: 50px;
+    }
+    
+    /* Scroll horizontal suave */
+    .fc .fc-scrollgrid-section-body {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .fc .fc-timegrid-cols {
+        min-width: 400px;
+    }
+    
+    /* Indicador de scroll */
+    .fc .fc-scrollgrid-section-body::after {
+        content: '← Deslize →';
+        position: absolute;
+        bottom: 5px;
+        right: 10px;
+        font-size: 0.7em;
+        color: #666;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Ajustes para telas muito pequenas */
+    #calendar, #admin-calendar {
+        height: 75vh !important;
+        min-height: 500px;
+        max-height: 700px;
+    }
+    
+    .fc .fc-col-header-cell-cushion {
+        font-size: 0.8em !important;
+        padding: 4px 1px !important;
+    }
+    
+    .fc .fc-timegrid-slot {
+        height: 2.5em !important;
+        min-height: 2.5em !important;
+    }
+    
+    .fc .fc-timegrid-slot-label-cushion {
+        font-size: 0.8em !important;
+    }
+    
+    .fc-event {
+        font-size: 0.8em !important;
+        padding: 5px 3px !important;
+        min-height: 25px;
+    }
+    
+    .fc .fc-toolbar-title {
+        font-size: 1.1em !important;
+    }
+    
+    .fc .fc-button {
+        padding: 8px 10px !important;
+        font-size: 0.85em !important;
+        min-width: 45px;
+    }
+    
+    .fc .fc-timegrid-cols {
+        min-width: 350px;
+    }
+}
+
+/* MELHORIA PARA OS DIAS DA SEMANA NO CABEÇALHO */
+.fc .fc-col-header-cell-cushion {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    text-align: center;
+    padding: 8px 4px;
+}
+
+/* Garantir que o calendário ocupe espaço suficiente */
+.fc .fc-view-harness {
+    flex-grow: 1;
+    min-height: 400px;
+}
+
+/* Botão de hoje destacado */
+.fc .fc-today-button {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+    font-weight: 600;
+}
+
+/* Loading state */
+.fc .fc-loading {
+    font-size: 1.2em;
+    color: #666;
+}
