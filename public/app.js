@@ -373,10 +373,6 @@ async function updateTimeSelect() {
         timeSelect.innerHTML = '<option value="">Erro ao carregar</option>';
     }
 }
-// Função para detectar se é mobile
-function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-}
 // Inicializa o calendário do cliente
 async function initializeClientCalendar() {
     const calendarEl = document.getElementById('calendar');
@@ -391,16 +387,14 @@ async function initializeClientCalendar() {
 
     const barberSelect = document.getElementById('barber-select');
     
-    // Configurações responsivas para o calendário
-    const calendarOptions = {
+    clientCalendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'timeGridWeek',
         slotMinTime: '08:00:00',
         slotMaxTime: '20:00:00',
         slotDuration: '00:30:00',
         selectable: true,
         selectOverlap: false,
-        
-        // CONFIGURAÇÕES RESPONSIVAS
+         // CONFIGURAÇÕES RESPONSIVAS
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -431,7 +425,6 @@ async function initializeClientCalendar() {
                 }
             }
         },
-
         events: async (info, successCallback) => {
             const barberId = barberSelect.value;
             if (!barberId) {
@@ -441,7 +434,6 @@ async function initializeClientCalendar() {
             const events = await loadAppointments(barberId, false);
             successCallback(events);
         },
-        
         select: async function(info) {
             const barberId = barberSelect.value;
             if (!barberId) {
@@ -453,6 +445,7 @@ async function initializeClientCalendar() {
             const date = info.startStr.split('T')[0];
             const time = info.startStr.split('T')[1].substring(0, 5);
             
+            // Verificar se o horário já está ocupado
             const isAvailable = await checkAppointmentAvailability(barberId, date, time);
             if (!isAvailable) {
                 alert('Este horário já está ocupado. Por favor, escolha outro horário.');
@@ -481,7 +474,7 @@ async function initializeClientCalendar() {
                     
                     alert('Agendamento realizado com sucesso');
                     clientCalendar.refetchEvents();
-                    loadDates();
+                    loadDates(); // Recarrega as datas disponíveis
                 } catch (error) {
                     console.error('Erro ao criar agendamento:', error);
                     alert('Erro ao criar agendamento');
@@ -489,69 +482,26 @@ async function initializeClientCalendar() {
             }
             clientCalendar.unselect();
         },
-        
         eventClick: function(info) {
             const { barberName, clientName } = info.event.extendedProps;
             alert(`Horário Ocupado\nBarbeiro: ${barberName}\nCliente: ${clientName}`);
         }
-    };
-
-    // Ajustes específicos para mobile
-    if (isMobileDevice()) {
-        calendarOptions.headerToolbar = {
-            left: 'prev,next',
-            center: 'title',
-            right: ''
-        };
-        
-        calendarOptions.initialView = 'timeGridDay'; // Visualização diária no mobile
-        calendarOptions.slotMinTime = '07:00:00';
-        calendarOptions.slotMaxTime = '21:00:00';
-        
-        // Formatação otimizada para mobile
-        calendarOptions.views = {
-            timeGridDay: {
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                },
-                dayHeaderFormat: { weekday: 'short', month: 'short', day: 'numeric' }
-            },
-            timeGridWeek: {
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                },
-                dayHeaderFormat: { weekday: 'short' }
-            }
-        };
-    }
-
-    clientCalendar = new FullCalendar.Calendar(calendarEl, calendarOptions);
+    });
     
     clientCalendar.render();
     
-    // Redimensionar o calendário quando a janela mudar de tamanho
-    window.addEventListener('resize', () => {
-        if (clientCalendar) {
-            clientCalendar.render();
-        }
-    });
-    
+    // Configurar o select de barbeiro para recarregar o calendário
     barberSelect.addEventListener('change', () => {
         if (clientCalendar) {
             clientCalendar.refetchEvents();
         }
-        loadDates();
+        loadDates(); // Carrega datas quando muda o barbeiro
     });
 
+    // Inicializar selects de data e hora
     loadDates();
     setupAppointmentBooking();
 }
-
-
 
 // Verificar disponibilidade de horário
 async function checkAppointmentAvailability(barberId, date, time) {
