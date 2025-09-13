@@ -15,261 +15,526 @@
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Estilos adicionais para os controles */
-        .calendar-controls {
-            margin: 15px 0;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
         }
-        
-        .calendar-controls select,
-        .calendar-controls button {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: white;
-            cursor: pointer;
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
         }
-        
-        .calendar-controls button:hover {
-            background-color: #e9e9e9;
+
+        header {
+            background-color: #000000;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #333333;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        
-        .calendar-controls label {
+
+        header h1 {
+            font-size: 2em;
+            color: #ffffff;
+            margin: 0;
             font-weight: bold;
-            margin-right: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        
-        #admin-calendar {
-            height: 600px;
-            margin: 20px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+
+        main {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
+            border: 1px solid #333333;
         }
-        
-        /* layout para os selects */
-        .form-group {
+
+        h2, h3 {
+            color: #ffffff;
+            border-bottom: 2px solid #444444;
+            padding-bottom: 12px;
+            margin-top: 25px;
+            font-weight: 600;
+        }
+
+        input, select, button {
+            display: block;
+            width: 100%;
+            margin: 12px 0;
+            padding: 15px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1.1em;
+        }
+
+        input, select {
+            background-color: #2a2a2a;
+            color: #ffffff;
+            border: 1px solid #444444;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #666666;
+            background-color: #333333;
+        }
+
+        button {
+            background-color: #333333;
+            color: #ffffff;
+            cursor: pointer;
+            border: 1px solid #555555;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #444444;
+            border-color: #666666;
+            transform: translateY(-2px);
+        }
+
+        /* CALENDÁRIO - VISUALIZAÇÃO PRINCIPAL */
+        #calendar-container {
+            margin: 25px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #444444;
+            background: #2a2a2a;
+            padding: 15px;
+        }
+
+        #calendar {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #dddddd;
+            min-height: 500px;
+        }
+
+        /* BOTÕES DE NAVEGAÇÃO */
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .calendar-nav button {
+            flex: 1;
+            padding: 12px;
+            font-size: 1em;
+        }
+
+        /* ESTILOS DO FULLCALENDAR */
+        .fc .fc-toolbar-title {
+            color: #000000 !important;
+            font-weight: 700;
+            font-size: 1.5em !important;
+            text-align: center;
             margin: 10px 0;
         }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+
+        .fc .fc-col-header-cell {
+            background-color: #f8f9fa !important;
+            color: #000000 !important;
+            border-color: #dee2e6 !important;
+            padding: 10px 0;
         }
-        
-        .form-group select,
-        .form-group input {
-            width: 100%;
-            max-width: 300px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+
+        .fc .fc-col-header-cell-cushion {
+            color: #000000 !important;
+            font-weight: 600;
+            font-size: 1em;
+            padding: 8px 4px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
         }
-        
-        /* Layout responsivo */
+
+        .fc .fc-daygrid-day-number {
+            color: #000000 !important;
+            font-weight: 600;
+            font-size: 1em;
+            padding: 6px;
+        }
+
+        .fc .fc-timegrid-slot-label-cushion {
+            color: #000000 !important;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .fc .fc-timegrid-slot {
+            height: 2.5em !important;
+            min-height: 2.5em !important;
+        }
+
+        .fc .fc-event {
+            border: 2px solid #444444;
+            color: #ffffff !important;
+            font-size: 0.9em !important;
+            padding: 5px !important;
+            line-height: 1.4 !important;
+            min-height: 30px;
+        }
+
+        .fc-event.occupied {
+            background-color: #dc2626 !important;
+            border-color: #b91c1c !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            font-size: 0.9em !important;
+            padding: 6px !important;
+        }
+
+        .fc .fc-button {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+            color: #ffffff !important;
+            font-size: 0.9em !important;
+            padding: 8px 12px !important;
+        }
+
+        /* MOBILE STYLES */
         @media (max-width: 768px) {
-            .calendar-controls {
-                flex-direction: column;
-                align-items: stretch;
+            header {
+                padding: 15px;
             }
             
-            .form-group select,
-            .form-group input {
-                max-width: 100%;
+            header h1 {
+                font-size: 1.6em;
+            }
+            
+            main {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            h2, h3 {
+                font-size: 1.3em;
+            }
+            
+            input, select, button {
+                padding: 12px;
+                font-size: 1em;
+            }
+            
+            /* CALENDÁRIO MOBILE OTIMIZADO */
+            #calendar-container {
+                padding: 10px;
+                margin: 15px 0;
+            }
+            
+            #calendar {
+                padding: 10px;
+                min-height: 70vh;
+            }
+            
+            .fc .fc-toolbar {
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px 0;
+            }
+            
+            .fc .fc-toolbar-title {
+                font-size: 1.3em !important;
+                order: -1;
+            }
+            
+            .fc .fc-toolbar-chunk {
+                display: flex;
+                justify-content: center;
+                width: 100%;
+            }
+            
+            .fc .fc-button {
+                padding: 10px !important;
+                font-size: 0.9em !important;
+            }
+            
+            .fc .fc-timegrid-slot {
+                height: 3em !important;
+                min-height: 3em !important;
+            }
+            
+            .fc .fc-event {
+                font-size: 0.85em !important;
+                padding: 4px !important;
+                min-height: 28px;
+            }
+            
+            .fc .fc-col-header-cell-cushion {
+                font-size: 0.9em;
+                padding: 6px 2px;
+            }
+            
+            .fc .fc-daygrid-day-number {
+                font-size: 0.9em;
+            }
+            
+            /* SCROLL HORIZONTAL PARA MOBILE */
+            .fc .fc-scrollgrid-section-body {
+                overflow-x: auto;
+            }
+            
+            .fc .fc-timegrid-cols {
+                min-width: 600px;
+            }
+            
+            /* INDICADOR DE SCROLL */
+            .scroll-indicator {
+                text-align: center;
+                color: #666;
+                font-size: 0.8em;
+                padding: 5px;
+                background: #f0f0f0;
+                border-radius: 4px;
+                margin-top: 10px;
             }
         }
-    /* Estilo para horários ocupados no calendário */
-    .occupied {
-        background-color: #ff4444 !important;
-        border-color: #cc0000 !important;
-        color: white !important;
-        cursor: not-allowed !important;
-    }
-    
-    .occupied:hover {
-        background-color: #ff6666 !important;
-    }
-    
-    /* Estilo para horários disponíveis no calendário */
-    .fc-time-grid .fc-slats td {
-        background-color: #f8fff8; 
-    }
-    
-    .fc-time-grid .fc-slats .fc-disabled {
-        background-color: #fff8f8; 
-    }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.4em;
+            }
+            
+            main {
+                margin: 5px;
+                padding: 10px;
+            }
+            
+            #calendar {
+                padding: 8px;
+                min-height: 65vh;
+            }
+            
+            .fc .fc-toolbar-title {
+                font-size: 1.1em !important;
+            }
+            
+            .fc .fc-button {
+                padding: 8px !important;
+                font-size: 0.8em !important;
+            }
+            
+            .fc .fc-timegrid-slot {
+                height: 3.2em !important;
+                min-height: 3.2em !important;
+            }
+            
+            .fc .fc-event {
+                font-size: 0.8em !important;
+                padding: 3px !important;
+            }
+            
+            .fc .fc-timegrid-cols {
+                min-width: 500px;
+            }
+        }
+
+        /* BOTÃO DE VOLTA AO TOPO */
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            opacity: 0.8;
+        }
+
+        .back-to-top:hover {
+            opacity: 1;
+            transform: translateY(-3px);
+        }
     </style>
 </head>
 <body>
     <header>
         <h1>Loverman Barbershop</h1>
     </header>
+    
     <main>
-        <!-- Login -->
-        <div id="login-section">
-            <h2>Login</h2>
-            <div class="form-group">
-                <input type="text" id="login-username" placeholder="Usuário">
-            </div>
-            <div class="form-group">
-                <input type="password" id="login-password" placeholder="Senha">
-            </div>
-            <button onclick="login()">Entrar</button>
-            <button onclick="showRegister()">Cadastrar</button>
-        </div>
-
-        <!-- Cadastro -->
-        <div id="register-section" style="display: none;">
-            <h2>Cadastro</h2>
-            <div class="form-group">
-                <input type="text" id="register-username" placeholder="Usuário">
-            </div>
-            <div class="form-group">
-                <input type="password" id="register-password" placeholder="Senha">
-            </div>
-            <div class="form-group">
-                <input type="text" id="register-name" placeholder="Nome">
-            </div>
-            <div class="form-group">
-                <input type="text" id="register-phone" placeholder="Telefone">
-            </div>
-            <button onclick="register()">Cadastrar</button>
-            <button onclick="showLogin()">Voltar</button>
-        </div>
-
         <!-- Painel do Cliente -->
-        <div id="client-section" style="display: none;">
-            <h2>Bem-vindo, <span id="client-username"></span></h2>
+        <div id="client-section">
+            <h2>Agendamento Online</h2>
             
             <div class="form-group">
-                <label for="barber-select">Barbeiro:</label>
-                <select id="barber-select"></select>
+                <label for="barber-select">Selecione o Barbeiro:</label>
+                <select id="barber-select">
+                    <option value="">Selecione um barbeiro</option>
+                    <option value="1">João Silva</option>
+                    <option value="2">Maria Santos</option>
+                    <option value="3">Carlos Oliveira</option>
+                </select>
+            </div>
+            
+            <div id="calendar-container">
+                <div class="calendar-nav">
+                    <button id="prev-btn">Anterior</button>
+                    <button id="today-btn">Hoje</button>
+                    <button id="next-btn">Próximo</button>
+                </div>
+                
+                <div id="calendar"></div>
+                
+                <div class="scroll-indicator">← Deslize horizontalmente para ver mais horários →</div>
             </div>
             
             <div class="form-group">
-                <label for="date-select">Data:</label>
-                <select id="date-select"></select>
+                <label for="date-select">Data selecionada:</label>
+                <input type="date" id="date-select">
             </div>
             
             <div class="form-group">
-                <label for="time-select">Horário:</label>
-                <select id="time-select"></select>
+                <label for="time-select">Horário selecionado:</label>
+                <input type="time" id="time-select">
             </div>
             
-            <button id="book-appointment">Agendar</button>
-            
-            <h3>Calendário de Horários</h3>
-            <div id="calendar" style="height: 500px; margin: 20px 0;"></div>
-            
-            <button onclick="logout()">Sair</button>
-        </div>
-
-        <!-- Painel do Admin -->
-        <div id="admin-section" style="display: none;">
-            <h2>Painel do Administrador</h2>
-            
-            <!-- Gerenciamento de Barbeiros -->
-            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-                <h3>Adicionar Barbeiro</h3>
-                <div class="form-group">
-                    <input type="text" id="barber-name" placeholder="Nome do Barbeiro">
-                </div>
-                <button onclick="addBarber()">Adicionar</button>
-            </div>
-            
-            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-                <h3>Barbeiros Cadastrados</h3>
-                <table id="barbers-table" style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background-color: #f5f5f5;">
-                            <th style="padding: 10px; border: 1px solid #ddd;">ID</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">Nome</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <!-- Marcar Agendamento -->
-            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-                <h3>Marcar Agendamento</h3>
-                <div class="form-group">
-                    <label for="admin-client-select">Cliente:</label>
-                    <select id="admin-client-select">
-                        <option value="">Selecione um cliente</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="admin-barber-select">Barbeiro:</label>
-                    <select id="admin-barber-select">
-                        <option value="">Selecione um barbeiro</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="admin-appointment-date">Data:</label>
-                    <input type="date" id="admin-appointment-date">
-                </div>
-                
-                <div class="form-group">
-                    <label for="admin-appointment-time">Horário:</label>
-                    <input type="time" id="admin-appointment-time" step="1800">
-                </div>
-                
-                <button onclick="createAdminAppointment()">Marcar Agendamento</button>
-            </div>
-
-            <!-- Calendário de Agendamentos -->
-            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-                <h3>Visualizar Calendário de Agendamentos</h3>
-                
-                <!-- Controles do Calendário -->
-                <div id="admin-calendar-controls" class="calendar-controls">
-                    <div>
-                        <label for="admin-view-select">Visualização:</label>
-                        <select id="admin-view-select">
-                            <option value="week">Semana</option>
-                            <option value="day">Dia</option>
-                        </select>
-                    </div>
-                    <button onclick="goToToday()">Hoje</button>
-                    <button onclick="goToPrevious()">← Anterior</button>
-                    <button onclick="goToNext()">Próximo →</button>
-                </div>
-                
-                <!-- Calendário -->
-                <div id="admin-calendar"></div>
-            </div>
-
-            <!-- Clientes Cadastrados -->
-            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-                <h3>Clientes Cadastrados</h3>
-                <table id="clients-table" style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background-color: #f5f5f5;">
-                            <th style="padding: 10px; border: 1px solid #ddd;">ID</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">Usuário</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">Nome</th>
-                            <th style="padding: 10px; border: 1px solid #ddd;">Telefone</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            
-            <button onclick="logout()">Sair</button>
+            <button id="confirm-btn">Confirmar Agendamento</button>
         </div>
     </main>
+    
+    <div class="back-to-top" id="back-to-top">↑</div>
 
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicialização do calendário
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                slotMinTime: '08:00:00',
+                slotMaxTime: '20:00:00',
+                slotDuration: '00:30:00',
+                allDaySlot: false,
+                height: 'auto',
+                headerToolbar: false,
+                locale: 'pt-br',
+                
+                // Eventos de exemplo
+                events: [
+                    {
+                        title: 'Ocupado - João Silva',
+                        start: '2024-01-15T09:00:00',
+                        end: '2024-01-15T09:30:00',
+                        backgroundColor: 'red',
+                        borderColor: 'red'
+                    },
+                    {
+                        title: 'Ocupado - Maria Santos',
+                        start: '2024-01-15T10:00:00',
+                        end: '2024-01-15T10:30:00',
+                        backgroundColor: 'red',
+                        borderColor: 'red'
+                    },
+                    {
+                        title: 'Ocupado - Carlos Oliveira',
+                        start: '2024-01-15T14:00:00',
+                        end: '2024-01-15T14:30:00',
+                        backgroundColor: 'red',
+                        borderColor: 'red'
+                    }
+                ],
+                
+                // Permitir seleção de horários
+                selectable: true,
+                selectMirror: true,
+                
+                // Manipular seleção de horários
+                select: function(info) {
+                    const date = info.startStr.split('T')[0];
+                    const time = info.startStr.split('T')[1].substring(0, 5);
+                    
+                    document.getElementById('date-select').value = date;
+                    document.getElementById('time-select').value = time;
+                    
+                    // Aqui você pode adicionar a lógica para verificar disponibilidade
+                    // e mostrar confirmação
+                    alert(`Horário selecionado: ${date} às ${time}`);
+                },
+                
+                // Personalizar a aparência dos eventos
+                eventContent: function(arg) {
+                    return {
+                        html: `<div style="padding: 2px; font-weight: bold;">${arg.timeText} - ${arg.event.title}</div>`
+                    };
+                }
+            });
+            
+            calendar.render();
+            
+            // Navegação do calendário
+            document.getElementById('prev-btn').addEventListener('click', function() {
+                calendar.prev();
+            });
+            
+            document.getElementById('today-btn').addEventListener('click', function() {
+                calendar.today();
+            });
+            
+            document.getElementById('next-btn').addEventListener('click', function() {
+                calendar.next();
+            });
+            
+            // Botão de confirmação
+            document.getElementById('confirm-btn').addEventListener('click', function() {
+                const date = document.getElementById('date-select').value;
+                const time = document.getElementById('time-select').value;
+                
+                if (!date || !time) {
+                    alert('Por favor, selecione uma data e horário primeiro.');
+                    return;
+                }
+                
+                alert(`Agendamento confirmado para ${date} às ${time}`);
+                // Aqui você adicionaria a lógica para salvar o agendamento
+            });
+            
+            // Botão de voltar ao topo
+            const backToTopBtn = document.getElementById('back-to-top');
+            
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    backToTopBtn.style.display = 'flex';
+                } else {
+                    backToTopBtn.style.display = 'none';
+                }
+            });
+            
+            backToTopBtn.addEventListener('click', function() {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            
+            // Ajustar o calendário ao redimensionar a janela
+            window.addEventListener('resize', function() {
+                calendar.updateSize();
+            });
+        });
+    </script>
 </body>
 </html>
