@@ -9,24 +9,24 @@ body {
 
 header {
     background-color: #000000;
-    padding: 25px;
+    padding: 20px;
     text-align: center;
     border-bottom: 2px solid #333333;
 }
 
 header h1 {
-    font-size: 2.8em;
+    font-size: 2.5em;
     color: #ffffff;
     margin: 0;
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 
 main {
-    max-width: 900px;
-    margin: 30px auto;
-    padding: 30px;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 25px;
     background-color: #1a1a1a;
     border-radius: 12px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
@@ -36,19 +36,24 @@ main {
 h2, h3 {
     color: #ffffff;
     border-bottom: 2px solid #444444;
-    padding-bottom: 10px;
+    padding-bottom: 12px;
     margin-top: 25px;
     font-weight: 600;
+    font-size: 1.8em;
+}
+
+h3 {
+    font-size: 1.5em;
 }
 
 input, select, button {
     display: block;
     width: 100%;
-    margin: 12px 0;
-    padding: 12px;
-    border-radius: 6px;
+    margin: 15px 0;
+    padding: 15px;
+    border-radius: 8px;
     border: none;
-    font-size: 1em;
+    font-size: 1.1em;
     box-sizing: border-box;
 }
 
@@ -57,6 +62,7 @@ input, select {
     color: #ffffff;
     border: 1px solid #444444;
     transition: border-color 0.3s ease;
+    font-size: 1.1em;
 }
 
 input:focus, select:focus {
@@ -74,6 +80,8 @@ button {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
+    font-size: 1.1em;
+    padding: 16px;
 }
 
 button:hover {
@@ -88,86 +96,73 @@ button:active {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-/* CALENDÁRIO COM FUNDO BRANCO E BORDAS PONTILHADAS */
+/* CALENDÁRIO COM TAMANHO ADEQUADO */
 #calendar, #admin-calendar {
     background-color: #ffffff !important;
     color: #000000 !important;
-    border-radius: 8px;
-    padding: 15px;
+    border-radius: 10px;
+    padding: 20px;
     border: 1px solid #dddddd;
-    margin-top: 20px;
+    margin-top: 25px;
+    min-height: 600px;
 }
 
-/* Bordas pontilhadas para as colunas */
-.fc .fc-timegrid-col {
-    border-right: 2px dotted #e0e0e0 !important;
-}
-
-.fc .fc-timegrid-col:last-child {
-    border-right: none !important;
-}
-
-.fc .fc-daygrid-day {
-    border-right: 2px dotted #e0e0e0 !important;
-    background-color: #ffffff !important;
-    border-color: #dee2e6 !important;
-}
-
-.fc .fc-daygrid-day:last-child {
-    border-right: none !important;
-}
-
-/* Linhas com bordas sólidas */
-.fc .fc-timegrid-slot {
-    border-bottom: 1px solid #dee2e6 !important;
-    background-color: #ffffff !important;
-}
-
-.fc .fc-timegrid-slot-label {
-    border-right: 1px solid #dee2e6 !important;
-}
-
-.fc .fc-timegrid-axis {
-    border-right: 1px solid #dee2e6 !important;
-    background-color: #f8f9fa !important;
-}
-
-/* Estilos para o FullCalendar */
+/* TAMANHO ADEQUADO PARA O CALENDÁRIO */
 .fc .fc-toolbar-title {
     color: #000000 !important;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 1.8em !important;
+    margin: 10px 0;
 }
 
 .fc .fc-col-header-cell {
     background-color: #f8f9fa !important;
     color: #000000 !important;
     border-color: #dee2e6 !important;
-    border-bottom: 2px solid #cccccc !important;
+    padding: 12px 0;
 }
 
 .fc .fc-col-header-cell-cushion {
     color: #000000 !important;
     font-weight: 600;
+    font-size: 1.1em;
+    padding: 10px;
 }
 
 .fc .fc-daygrid-day-number {
     color: #000000 !important;
+    font-weight: 600;
+    font-size: 1.1em;
+    padding: 8px;
 }
 
 .fc .fc-timegrid-slot-label-cushion {
     color: #000000 !important;
+    font-weight: 600;
+    font-size: 1em;
+}
+
+.fc .fc-timegrid-slot {
+    height: 2.5em !important;
+    min-height: 2.5em !important;
 }
 
 .fc .fc-event {
-    border: 1px solid #444444;
+    border: 2px solid #444444;
     color: #ffffff !important;
+    font-size: 1em !important;
+    padding: 6px 8px !important;
+    line-height: 1.4 !important;
+    min-height: 32px;
 }
 
 .fc-event.occupied {
     background-color: #dc2626 !important;
     border-color: #b91c1c !important;
     color: #ffffff !important;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1em !important;
+    padding: 8px !important;
 }
 
 .fc-event.occupied:hover {
@@ -179,6 +174,9 @@ button:active {
     background-color: #6c757d !important;
     border-color: #6c757d !important;
     color: #ffffff !important;
+    font-size: 1em !important;
+    padding: 10px 15px !important;
+    min-height: 44px;
 }
 
 .fc .fc-button:hover {
@@ -186,17 +184,12 @@ button:active {
     border-color: #545b62 !important;
 }
 
-.fc .fc-button-primary:not(:disabled).fc-button-active {
-    background-color: #495057 !important;
-    border-color: #495057 !important;
-}
-
-/* BOTÕES DE NAVEGAÇÃO DO ADMIN - TEXTO PRETO */
+/* BOTÕES DE NAVEGAÇÃO DO ADMIN */
 .calendar-controls {
     background-color: #2a2a2a;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
     border: 1px solid #444444;
 }
 
@@ -204,10 +197,13 @@ button:active {
 .calendar-controls button {
     display: inline-block;
     width: auto;
-    margin: 0 10px 10px 0;
+    margin: 0 15px 15px 0;
     background-color: #ffffff !important;
     color: #000000 !important;
-    border: 1px solid #cccccc !important;
+    border: 2px solid #cccccc !important;
+    font-size: 1.1em;
+    padding: 12px 20px;
+    min-width: 100px;
 }
 
 .calendar-controls select:hover,
@@ -217,60 +213,41 @@ button:active {
     color: #000000 !important;
 }
 
-.calendar-controls select:focus,
-.calendar-controls button:focus {
-    outline: 2px solid #666666;
-    outline-offset: 2px;
-}
-
 .calendar-controls label {
     color: #ffffff !important;
     font-weight: 600;
-    margin-right: 10px;
+    font-size: 1.2em;
+    margin-right: 15px;
+    margin-bottom: 10px;
+    display: inline-block;
 }
 
-.calendar-controls button {
-    min-width: 80px;
-    text-align: center;
+/* FORMULÁRIOS */
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 12px;
+    color: #cccccc;
     font-weight: 600;
+    font-size: 1.1em;
 }
 
-.calendar-controls select {
-    padding: 8px 12px;
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    border: 1px solid #cccccc;
-    border-radius: 4px;
-}
-
-/* Bordas do grid do calendário */
-.fc .fc-scrollgrid {
-    border-color: #dee2e6 !important;
-}
-
-.fc .fc-scrollgrid-section > td {
-    border-color: #dee2e6 !important;
-}
-
-.fc .fc-daygrid-day-frame {
-    border-color: #dee2e6 !important;
-}
-
-.fc .fc-timegrid-col-frame {
-    border-color: #dee2e6 !important;
-}
-
+/* TABELAS */
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 25px;
+    margin-top: 30px;
     background-color: #2a2a2a;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
+    font-size: 1.1em;
 }
 
 th, td {
-    padding: 12px;
+    padding: 15px;
     border: 1px solid #444444;
     text-align: left;
 }
@@ -281,174 +258,143 @@ th {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
+    font-size: 1.1em;
 }
 
 td {
     background-color: #2a2a2a;
     color: #e0e0e0;
+    font-size: 1em;
 }
 
 tr:hover td {
     background-color: #333333;
 }
 
-/* Estilos para seções específicas */
+/* SEÇÕES */
 #login-section, #register-section, #client-section, #admin-section {
-    padding: 20px;
+    padding: 25px;
     background-color: #222222;
-    border-radius: 8px;
-    margin-bottom: 25px;
+    border-radius: 10px;
+    margin-bottom: 30px;
     border: 1px solid #333333;
 }
 
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    color: #cccccc;
-    font-weight: 500;
-}
-
-/* Estados de desabilitado */
-input:disabled, select:disabled, button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-button:disabled:hover {
-    transform: none;
-    box-shadow: none;
-    background-color: #333333;
-}
-
-/* Scrollbar personalizada */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #1a1a1a;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #444444;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #555555;
-}
-
-/* Melhoria na visualização das células do calendário */
-.fc .fc-daygrid-day-top {
-    justify-content: center;
-}
-
-.fc .fc-daygrid-day-number {
-    font-weight: 600;
-    font-size: 1.1em;
-}
-
-.fc .fc-timegrid-slot-minor {
-    border-bottom-style: dotted !important;
-    border-bottom-width: 1px !important;
-    border-bottom-color: #f0f0f0 !important;
-}
-
-/* Destaque para o dia atual */
-.fc .fc-day-today {
-    background-color: #f8f9fa !important;
-}
-
-.fc .fc-day-today .fc-daygrid-day-number {
-    color: #dc2626 !important;
-    font-weight: bold;
-}
-
-/* Animações suaves */
-* {
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-/* Foco acessível */
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
-    outline: 2px solid #666666;
-    outline-offset: 2px;
-}
-
-/* Estados de loading */
-.loading {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-/* Mensagens de status */
-.status-message {
-    padding: 10px;
-    border-radius: 6px;
-    margin: 10px 0;
-    text-align: center;
-    font-weight: 500;
-}
-
-.status-success {
-    background-color: #166534;
-    color: #ffffff;
-    border: 1px solid #22c55e;
-}
-
-.status-error {
-    background-color: #7f1d1d;
-    color: #ffffff;
-    border: 1px solid #ef4444;
-}
-
-.status-warning {
-    background-color: #78350f;
-    color: #ffffff;
-    border: 1px solid #f59e0b;
-}
-
+/* RESPONSIVIDADE - MOBILE */
 @media (max-width: 768px) {
+    header {
+        padding: 15px;
+    }
+    
+    header h1 {
+        font-size: 2em;
+    }
+    
     main {
         margin: 15px;
         padding: 20px;
     }
     
-    header {
-        padding: 20px;
-    }
-    
-    header h1 {
-        font-size: 2.2em;
+    h2, h3 {
+        font-size: 1.5em;
+        padding-bottom: 10px;
     }
     
     input, select, button {
-        padding: 10px;
+        padding: 14px;
+        font-size: 1.1em;
+        margin: 12px 0;
+    }
+    
+    button {
+        padding: 15px;
+    }
+    
+    /* CALENDÁRIO MOBILE MELHORADO */
+    #calendar, #admin-calendar {
+        padding: 15px;
+        min-height: 500px;
+        margin: 20px 0;
+    }
+    
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px 0;
+    }
+    
+    .fc .fc-toolbar-title {
+        font-size: 1.5em !important;
+        text-align: center;
+        margin: 10px 0;
+    }
+    
+    .fc .fc-button {
+        padding: 12px 15px !important;
+        font-size: 1em !important;
+        min-height: 48px;
+    }
+    
+    .fc .fc-timegrid-slot {
+        height: 3em !important;
+        min-height: 3em !important;
+    }
+    
+    .fc .fc-event {
+        font-size: 0.95em !important;
+        padding: 8px !important;
+        min-height: 36px;
+        line-height: 1.4 !important;
+    }
+    
+    .fc-event.occupied {
+        font-size: 0.9em !important;
+        padding: 10px !important;
+    }
+    
+    .fc .fc-col-header-cell-cushion {
+        font-size: 1em;
+        padding: 8px 4px;
+    }
+    
+    .fc .fc-daygrid-day-number {
+        font-size: 1em;
+        padding: 6px;
+    }
+    
+    /* CONTROLES MOBILE */
+    .calendar-controls {
+        padding: 15px;
     }
     
     .calendar-controls select,
     .calendar-controls button {
         width: 100%;
-        margin: 0 0 10px 0;
+        margin: 0 0 12px 0;
+        padding: 14px;
+        font-size: 1.1em;
     }
     
-    /* Ajustes para as bordas pontilhadas no mobile */
-    .fc .fc-timegrid-col {
-        border-right: 1px dotted #e0e0e0 !important;
+    .calendar-controls label {
+        display: block;
+        margin-bottom: 12px;
+        text-align: center;
+        font-size: 1.3em;
+        width: 100%;
     }
     
-    .fc .fc-daygrid-day {
-        border-right: 1px dotted #e0e0e0 !important;
+    /* LAYOUT GRID PARA BOTÕES */
+    .calendar-controls .navigation-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 15px;
     }
     
-    .fc .fc-toolbar-title {
-        font-size: 1.2em !important;
+    .calendar-controls .view-selector {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
     }
 }
 
@@ -466,382 +412,90 @@ select:focus-visible {
         font-size: 1.3em;
     }
     
+    /* CALENDÁRIO PARA TELAS PEQUENAS */
     #calendar, #admin-calendar {
-        padding: 8px;
-    }
-    
-    table {
-        font-size: 0.9em;
-    }
-    
-    th, td {
-        padding: 8px;
-    }
-    
-    .calendar-controls {
         padding: 10px;
-    }
-    
-    .calendar-controls select,
-    .calendar-controls button {
-        padding: 8px;
-        font-size: 0.9em;
-    }
-    
-    .calendar-controls label {
-        display: block;
-        margin-bottom: 5px;
-    }
-    
-    /* Calendário mobile mais compacto */
-    .fc .fc-timegrid-slot {
-        height: 2em !important;
-    }
-    
-    .fc-event {
-        font-size: 0.8em !important;
-        padding: 1px 3px !important;
-    }
-}
-
-/* MELHORIAS ESPECÍFICAS PARA MOBILE */
-@media (max-width: 768px) {
-    main {
-        margin: 10px;
-        padding: 15px;
-    }
-    
-    header {
-        padding: 15px;
-    }
-    
-    header h1 {
-        font-size: 1.8em;
-        letter-spacing: 1px;
-    }
-    
-    input, select, button {
-        padding: 12px;
-        margin: 8px 0;
-        font-size: 16px; /* Previne zoom no iOS */
-    }
-    
-    /* CALENDÁRIO MOBILE - VISUALIZAÇÃO MELHORADA */
-    #calendar, #admin-calendar {
-        padding: 8px;
-        margin: 15px 0;
-        height: auto !important;
-        min-height: 500px;
-    }
-    
-    /* Toolbar do calendário para mobile */
-    .fc .fc-toolbar {
-        flex-direction: column;
-        gap: 10px;
-        padding: 10px 0;
-    }
-    
-    .fc .fc-toolbar-title {
-        font-size: 1.3em !important;
-        text-align: center;
-        margin: 5px 0;
-        order: -1; /* Coloca o título no topo */
-    }
-    
-    .fc .fc-toolbar-chunk {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-    }
-    
-    .fc .fc-button {
-        padding: 8px 12px;
-        font-size: 0.9em;
-        min-width: 40px;
-    }
-    
-    /* Visualização de semana melhorada */
-    .fc .fc-timegrid-slot {
-        height: 3em !important; /* Altura maior para as células */
-        min-height: 3em !important;
-    }
-    
-    .fc .fc-timegrid-slot-label {
-        font-size: 0.8em;
-        padding: 2px;
-    }
-    
-    .fc .fc-timegrid-axis-cushion {
-        font-size: 0.8em;
-        font-weight: 600;
-    }
-    
-    /* Eventos maiores e mais legíveis */
-    .fc-event {
-        font-size: 0.9em !important;
-        padding: 3px 5px !important;
-        margin: 1px 0;
-        line-height: 1.3 !important;
-        min-height: 24px;
-    }
-    
-    .fc-event.occupied {
-        font-size: 0.85em !important;
-        padding: 4px 3px !important;
-    }
-    
-    /* Cabeçalhos das colunas */
-    .fc .fc-col-header-cell {
-        padding: 5px 2px;
-    }
-    
-    .fc .fc-col-header-cell-cushion {
-        font-size: 0.8em;
-        padding: 4px 2px;
-        text-overflow: ellipsis;
-        overflow: hidden;
-        white-space: nowrap;
-    }
-    
-    /* Ajustes nas bordas pontilhadas para mobile */
-    .fc .fc-timegrid-col {
-        border-right: 1px dotted #d0d0d0 !important;
-    }
-    
-    .fc .fc-daygrid-day {
-        border-right: 1px dotted #d0d0d0 !important;
-    }
-    
-    /* Controles de navegação do admin para mobile */
-    .calendar-controls {
-        padding: 12px;
-        margin: 15px 0;
-    }
-    
-    .calendar-controls select,
-    .calendar-controls button {
-        width: 100%;
-        margin: 0 0 8px 0;
-        padding: 10px;
-        font-size: 14px;
-    }
-    
-    .calendar-controls label {
-        display: block;
-        margin-bottom: 8px;
-        text-align: center;
-        font-size: 1.1em;
-    }
-    
-    /* Layout em grid para os botões de navegação */
-    .calendar-controls .navigation-buttons {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 8px;
-        margin-bottom: 10px;
-    }
-    
-    .calendar-controls .view-selector {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
-}
-
-@media (max-width: 480px) {
-    /* AJUSTES PARA TELAS MUITO PEQUENAS */
-    header h1 {
-        font-size: 1.5em;
-    }
-    
-    main {
-        margin: 5px;
-        padding: 10px;
-    }
-    
-    h2, h3 {
-        font-size: 1.2em;
-        padding-bottom: 8px;
-        margin-top: 20px;
-    }
-    
-    /* Calendário ainda mais otimizado */
-    #calendar, #admin-calendar {
-        padding: 5px;
         min-height: 450px;
     }
     
     .fc .fc-toolbar-title {
-        font-size: 1.1em !important;
+        font-size: 1.3em !important;
     }
     
     .fc .fc-button {
-        padding: 6px 8px;
-        font-size: 0.8em;
-        min-width: 35px;
+        padding: 10px 12px !important;
+        font-size: 0.95em !important;
     }
     
-    /* Altura das células aumentada */
     .fc .fc-timegrid-slot {
-        height: 3.5em !important;
-        min-height: 3.5em !important;
+        height: 3.2em !important;
+        min-height: 3.2em !important;
     }
     
-    /* Eventos mais compactos mas legíveis */
-    .fc-event {
-        font-size: 0.8em !important;
-        padding: 2px 3px !important;
-        line-height: 1.2 !important;
-        min-height: 22px;
+    .fc .fc-event {
+        font-size: 0.9em !important;
+        padding: 7px !important;
+        min-height: 34px;
     }
     
     .fc-event.occupied {
-        font-size: 0.75em !important;
-        padding: 3px 2px !important;
+        font-size: 0.85em !important;
+        padding: 8px !important;
     }
     
-    /* Texto dos horários */
-    .fc .fc-timegrid-slot-label-cushion {
-        font-size: 0.75em;
-    }
-    
-    .fc .fc-timegrid-axis-cushion {
-        font-size: 0.7em;
-    }
-    
-    /* Cabeçalhos dos dias */
-    .fc .fc-col-header-cell-cushion {
-        font-size: 0.7em;
-        padding: 3px 1px;
-    }
-    
-    /* Botões de navegação */
+    /* BOTÕES DE NAVEGAÇÃO */
     .calendar-controls {
-        padding: 10px;
-    }
-    
-    .calendar-controls select,
-    .calendar-controls button {
-        padding: 8px;
-        font-size: 13px;
+        padding: 12px;
     }
     
     .calendar-controls .navigation-buttons {
         grid-template-columns: 1fr;
-        gap: 5px;
+        gap: 8px;
     }
     
     .calendar-controls .view-selector {
         grid-template-columns: 1fr;
-        gap: 5px;
+        gap: 8px;
     }
 }
 
-
-/* Forçar visualização vertical em mobile */
-@media (max-width: 768px) {
-    .fc .fc-timeGridWeek-view .fc-timegrid-cols {
-        min-width: 100% !important;
-    }
-    
-    .fc .fc-scrollgrid-section-body {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
-    /* Melhorar a rolagem horizontal */
-    .fc .fc-timegrid-cols {
-        min-width: 600px; /* Largura mínima para garantir boa visualização */
-    }
+/* MELHORIAS GERAIS */
+.fc .fc-day-today {
+    background-color: #e8f4f8 !important;
 }
 
-/* Estilo para scroll horizontal no calendário */
-.fc .fc-scrollgrid-section-body {
-    scrollbar-width: thin;
-    scrollbar-color: #666666 #1a1a1a;
+.fc .fc-day-today .fc-daygrid-day-number {
+    color: #2563eb !important;
+    font-weight: bold;
 }
 
-.fc .fc-scrollgrid-section-body::-webkit-scrollbar {
-    height: 6px;
+/* SCROLL PERSONALIZADO */
+::-webkit-scrollbar {
+    width: 10px;
 }
 
-.fc .fc-scrollgrid-section-body::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
     background: #1a1a1a;
 }
 
-.fc .fc-scrollgrid-section-body::-webkit-scrollbar-thumb {
-    background: #666666;
-    border-radius: 3px;
+::-webkit-scrollbar-thumb {
+    background: #444444;
+    border-radius: 5px;
 }
 
-.fc .fc-scrollgrid-section-body::-webkit-scrollbar-thumb:hover {
-    background: #888888;
+::-webkit-scrollbar-thumb:hover {
+    background: #555555;
 }
 
-/* Visualização de dia único para mobile */
-@media (max-width: 768px) {
-    .fc .fc-timeGridDay-view .fc-timegrid-slot {
-        height: 2.5em !important;
-    }
-    
-    .fc .fc-timeGridDay-view .fc-event {
-        font-size: 0.9em !important;
-        padding: 4px !important;
-    }
+/* ANIMAÇÕES */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
-/* Indicador visual de que há scroll horizontal */
-.fc .fc-scrollgrid-section-body {
-    position: relative;
-}
-
-.fc .fc-scrollgrid-section-body::after {
-    content: '← role →';
-    position: absolute;
-    bottom: 5px;
-    right: 10px;
-    font-size: 0.7em;
-    color: #666666;
-    opacity: 0.7;
-}
-
-@media (max-width: 768px) {
-    .fc .fc-scrollgrid-section-body::after {
-        content: 'Deslize para os lados →';
-        bottom: 2px;
-        right: 5px;
-        font-size: 0.6em;
-    }
-}
-
-/* Melhorar acessibilidade em mobile */
-@media (max-width: 768px) {
-    .fc-event {
-        cursor: pointer;
-    }
-    
-    .fc-event:active {
-        transform: scale(0.98);
-        opacity: 0.9;
-    }
-    
-    /* Aumentar área de toque */
-    .fc .fc-button {
-        min-height: 44px; /* Tamanho mínimo recomendado para toque */
-    }
-    
-    .fc-event {
-        min-height: 30px; /* Área maior para toque em eventos */
-    }
-}
-
-/* Animações suaves para mobile */
-@media (max-width: 768px) {
-    .fc .fc-scrollgrid-section-body {
-        transition: transform 0.3s ease;
-    }
-    
-    .fc-event {
-        transition: all 0.2s ease;
-    }
+/* FOCO ACESSÍVEL */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 3px solid #666666;
+    outline-offset: 2px;
 }
