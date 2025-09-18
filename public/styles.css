@@ -539,37 +539,7 @@ select:focus-visible {
     position: relative;
 }
 
-.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 8px;
-    height: 8px;
-    background-color: rgba(46, 204, 113, 0.5);
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):hover:after {
-    opacity: 1;
-}
-
-/* MELHORAR VISUALIZAÇÃO MOBILE */
-@media (max-width: 768px) {
-    .fc .fc-timegrid-slot {
-        min-height: 3.5em !important;
-    }
-    
-    .fc .fc-event {
-        min-height: 40px !important;
-        padding: 10px !important;
-        font-size: 0.9em !important;
-        line-height: 1.4 !important;
-    }
-    
-
+/* Adicione este CSS ao seu arquivo styles.css */
 .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
     content: 'clique e segure';
     position: absolute;
@@ -613,6 +583,30 @@ select:focus-visible {
     background-color: rgba(52, 152, 219, 0.2) !important;
     transition: background-color 0.2s ease;
 }
+
+.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):hover:after {
+    opacity: 1;
+}
+
+/* MELHORAR VISUALIZAÇÃO MOBILE */
+@media (max-width: 768px) {
+    .fc .fc-timegrid-slot {
+        min-height: 3.5em !important;
+    }
+    
+    .fc .fc-event {
+        min-height: 40px !important;
+        padding: 10px !important;
+        font-size: 0.9em !important;
+        line-height: 1.4 !important;
+    }
+    
+    .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):after {
+        width: 10px;
+        height: 10px;
+        top: 5px;
+        right: 5px;
+    }
     
     /* ÁREA DE CLIQUE MAIOR */
     .fc .fc-timegrid-col.fc-day-today {
