@@ -715,20 +715,6 @@ async function createAppointment(barberId, date, time) {
     }
 }
 
-// Função para confirmar agendamento (para selects)
-async function confirmAppointment(barberId, date, time) {
-    const isAvailable = await checkAppointmentAvailability(barberId, date, time);
-    if (!isAvailable) {
-        alert('Este horário já está ocupado. Por favor, escolha outro horário.');
-        return;
-    }
-    
-    const userConfirmed = confirm(`Confirmar agendamento para ${date} às ${time}?`);
-    if (userConfirmed) {
-        await createAppointment(barberId, date, time);
-    }
-}
-
 // Configurar eventos de redimensionamento
 function setupResizeEvents() {
     let resizeTimeout;
