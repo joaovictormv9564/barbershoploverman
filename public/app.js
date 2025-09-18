@@ -374,6 +374,7 @@ async function updateTimeSelect() {
     }
 }
 // Inicializa o calendário do cliente
+
 async function initializeClientCalendar() {
     const calendarEl = document.getElementById('calendar');
     if (!calendarEl) {
@@ -381,12 +382,18 @@ async function initializeClientCalendar() {
         return;
     }
 
+    // Destroi o calendário existente, se houver
     if (clientCalendar) {
         clientCalendar.destroy();
     }
 
     const barberSelect = document.getElementById('barber-select');
-    
+    if (!barberSelect) {
+        console.error('Elemento barber-select não encontrado');
+        return;
+    }
+
+    // Inicializa o calendário com FullCalendar
     clientCalendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'timeGridWeek',
         slotMinTime: '08:00:00',
@@ -394,226 +401,199 @@ async function initializeClientCalendar() {
         slotDuration: '00:30:00',
         selectable: true,
         selectOverlap: false,
-        
-        // Configuração importante para mobile
-        selectMirror: true,
-        selectMinDistance: 5, // Reduzir distância mínima para seleção no mobile
-        
+        selectMirror: true, // Melhora a seleção no mobile
+        selectMinDistance: 5, // Ajuste para toque no mobile
         selectAllow: function(selectInfo) {
-            // Permitir seleção apenas se não for evento existente
-            return !selectInfo.event;
+            return !selectInfo.event; // Só permite seleção em células vazias
         },
-        
         events: async (info, successCallback) => {
             const barberId = barberSelect.value;
             if (!barberId) {
                 successCallback([]);
                 return;
             }
-            const events = await loadAppointments(barberId, false);
-            successCallback(events);
+            try {
+                const events = await loadAppointments(barberId, false);
+                successCallback(events);
+            } catch (error) {
+                console.error('Erro ao carregar eventos:', error);
+                successCallback([]);
+            }
         },
-        
-        // FUNÇÃO DE SELEÇÃO (CLIQUE/TOQUE EM CÉLULA VAZIA)
+        // Agendamento por clique/toque em célula vazia
         select: async function(info) {
             console.log('Seleção detectada:', info.startStr);
-            
             const barberId = barberSelect.value;
             if (!barberId) {
                 alert('Selecione um barbeiro antes de escolher um horário');
-                clientCalendar.unselect();
                 return;
             }
-            
             const date = info.startStr.split('T')[0];
             const time = info.startStr.split('T')[1].substring(0, 5);
-            
-            // Verificar disponibilidade
             const isAvailable = await checkAppointmentAvailability(barberId, date, time);
             if (!isAvailable) {
-                alert('Este horário já está ocupado. Por favor, escolha outro horário.');
-                clientCalendar.unselect();
+                alert('Este horário já está ocupado. Escolha outro.');
                 return;
             }
-            
-            // Usar confirm mais amigável para mobile
-            const userConfirmed = confirm(`Agendar para ${date} às ${time}?`);
-            if (userConfirmed) {
+            if (confirm(`Agendar para ${date} às ${time}?`)) {
                 try {
                     const response = await fetch('/api/appointments', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            date, 
-                            time, 
-                            barber_id: barberId, 
-                            client_id: user.id 
-                        })
+                        body: JSON.stringify({ date, time, barber_id: barberId, client_id: user.id })
                     });
-                    
                     const data = await response.json();
                     if (data.error) {
                         alert(data.error);
                         return;
                     }
-                    
                     alert('✅ Agendamento realizado com sucesso!');
                     clientCalendar.refetchEvents();
-                    loadDates();
                 } catch (error) {
-                    console.error('Erro ao criar agendamento:', error);
-                    alert('❌ Erro ao criar agendamento');
+                    console.error('Erro ao agendar:', error);
+                    alert('❌ Erro ao agendar');
                 }
             }
-            clientCalendar.unselect();
         },
-        
-        // FUNÇÃO DE CLIQUE EM EVENTO EXISTENTE
+        // Clique em evento existente
         eventClick: function(info) {
-            console.log('Clique em evento detectado');
-            const { barberName, clientName } = info.event.extendedProps;
-            
-            // Alert mais amigável para mobile
+            const { barberName, clientName } = info.event.extendedProps || { barberName: 'Desconhecido', clientName: 'Desconhecido' };
             alert(`⏰ Horário Ocupado\n💈 Barbeiro: ${barberName}\n👤 Cliente: ${clientName}`);
-            
             info.jsEvent.preventDefault();
-            info.jsEvent.stopPropagation();
-            return false;
         },
-        
-        // Configurações para melhorar experiência mobile
+        // Configurações de interface
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
             right: 'timeGridDay,timeGridWeek'
         },
-        
         allDaySlot: false,
         dayMaxEvents: true,
         height: 'auto',
-        
-        // Otimizações para mobile
-        eventTimeFormat: {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        },
-        
+        // Formatos otimizados
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
         views: {
             timeGridWeek: {
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                },
+                slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
                 dayHeaderFormat: { weekday: 'short', day: 'numeric' }
             },
             timeGridDay: {
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                },
+                slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
                 dayHeaderFormat: { weekday: 'short', month: 'short', day: 'numeric' }
             }
         }
     });
-    
+
     clientCalendar.render();
-    
-    // Adicionar event listeners específicos para mobile
-    setupMobileTouchEvents(calendarEl);
-    
+
+    // Listener para mudança no select de barbeiro
     barberSelect.addEventListener('change', () => {
         if (clientCalendar) {
             clientCalendar.refetchEvents();
         }
-        loadDates();
     });
 
-    loadDates();
-    setupAppointmentBooking();
-}
+    // Função para agendar via select (data e hora)
+    async function setupAppointmentBooking() {
+        const dateSelect = document.getElementById('date-select');
+        const timeSelect = document.getElementById('time-select');
+        const bookButton = document.getElementById('book-appointment');
 
-// FUNÇÃO ESPECÍFICA PARA LIDAR COM TOUCH EVENTS NO MOBILE
-function setupMobileTouchEvents(calendarEl) {
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchStartTime = 0;
-    
-    calendarEl.addEventListener('touchstart', function(e) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchStartTime = Date.now();
-    }, { passive: true });
-    
-    calendarEl.addEventListener('touchend', function(e) {
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        const touchEndTime = Date.now();
-        
-        const deltaX = Math.abs(touchEndX - touchStartX);
-        const deltaY = Math.abs(touchEndY - touchStartY);
-        const deltaTime = touchEndTime - touchStartTime;
-        
-        // Se foi um toque rápido (não um swipe) e movimento pequeno
-        if (deltaTime < 300 && deltaX < 10 && deltaY < 10) {
-            const target = e.target;
-            
-            // Verificar se o clique foi em uma célula do calendário
-            const timeSlot = target.closest('.fc-timegrid-slot');
-            const event = target.closest('.fc-event');
-            
-            if (timeSlot && !event) {
-                // Simular clique para seleção
-                timeSlot.click();
+        if (!dateSelect || !timeSelect || !bookButton) {
+            console.warn('Elementos de agendamento por select não encontrados');
+            return;
+        }
+
+        // Carrega datas disponíveis
+        async function loadDates() {
+            const barberId = barberSelect.value;
+            if (!barberId) {
+                dateSelect.innerHTML = '<option value="">Selecione um barbeiro primeiro</option>';
+                timeSelect.innerHTML = '<option value="">Selecione uma data</option>';
+                return;
+            }
+            try {
+                const response = await fetch(`/api/available-dates?barber_id=${barberId}`);
+                const dates = await response.json();
+                dateSelect.innerHTML = '<option value="">Selecione uma data</option>';
+                dates.forEach(date => {
+                    const option = document.createElement('option');
+                    option.value = date;
+                    option.textContent = new Date(date).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+                    dateSelect.appendChild(option);
+                });
+                timeSelect.innerHTML = '<option value="">Selecione uma data</option>';
+            } catch (error) {
+                console.error('Erro ao carregar datas:', error);
             }
         }
-    }, { passive: true });
-    
-    // Melhorar acessibilidade para mobile
-    calendarEl.addEventListener('click', function(e) {
-        const target = e.target;
-        if (target.closest('.fc-event')) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-    });
-    clientCalendar.render();
-    
-    // Configurar o select de barbeiro para recarregar o calendário
-    barberSelect.addEventListener('change', () => {
-        if (clientCalendar) {
-            clientCalendar.refetchEvents();
-        }
-        loadDates();
-    });
 
-    // Inicializar selects de data e hora
-    loadDates();
+        // Carrega horários disponíveis para a data selecionada
+        dateSelect.addEventListener('change', async () => {
+            const barberId = barberSelect.value;
+            const date = dateSelect.value;
+            if (!barberId || !date) {
+                timeSelect.innerHTML = '<option value="">Selecione uma data</option>';
+                return;
+            }
+            try {
+                const response = await fetch(`/api/available-times?barber_id=${barberId}&date=${date}`);
+                const times = await response.json();
+                timeSelect.innerHTML = '<option value="">Selecione um horário</option>';
+                times.forEach(time => {
+                    const option = document.createElement('option');
+                    option.value = time;
+                    option.textContent = time;
+                    timeSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar horários:', error);
+            }
+        });
+
+        // Agendamento via botão
+        bookButton.addEventListener('click', async () => {
+            const barberId = barberSelect.value;
+            const date = dateSelect.value;
+            const time = timeSelect.value;
+            if (!barberId || !date || !time) {
+                alert('Preencha todos os campos para agendar.');
+                return;
+            }
+            const isAvailable = await checkAppointmentAvailability(barberId, date, time);
+            if (!isAvailable) {
+                alert('Este horário já está ocupado. Escolha outro.');
+                return;
+            }
+            if (confirm(`Agendar para ${date} às ${time}?`)) {
+                try {
+                    const response = await fetch('/api/appointments', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date, time, barber_id: barberId, client_id: user.id })
+                    });
+                    const data = await response.json();
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    alert('✅ Agendamento realizado com sucesso!');
+                    clientCalendar.refetchEvents();
+                    dateSelect.value = '';
+                    timeSelect.value = '';
+                } catch (error) {
+                    console.error('Erro ao agendar:', error);
+                    alert('❌ Erro ao agendar');
+                }
+            }
+        });
+
+        // Inicializa com as datas
+        loadDates();
+    }
+
     setupAppointmentBooking();
 }
-// Adicionar esta função para melhorar a experiência mobile
-function setupMobileCalendar() {
-    if (window.innerWidth <= 768) {
-        // Ajustes específicos para mobile
-        const calendarEl = document.getElementById('calendar');
-        if (calendarEl) {
-            calendarEl.style.minHeight = '70vh';
-        }
-        
-        // Melhorar a área de clique para mobile
-        const events = document.querySelectorAll('.fc-event');
-        events.forEach(event => {
-            event.style.minHeight = '35px';
-            event.style.padding = '8px';
-        });
-    }
-}
-
-// Chamar a função quando a janela for redimensionada
-window.addEventListener('resize', setupMobileCalendar);
-window.addEventListener('load', setupMobileCalendar);
 
 // Verificar disponibilidade de horário
 async function checkAppointmentAvailability(barberId, date, time) {
