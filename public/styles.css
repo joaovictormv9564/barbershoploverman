@@ -518,6 +518,7 @@ select:focus-visible {
 .fc .fc-timegrid-slot {
     cursor: pointer;
     min-height: 3em !important;
+    position: relative; /* Adicionado para posicionamento absoluto */
 }
 
 .fc .fc-timegrid-slot:hover {
@@ -537,10 +538,11 @@ select:focus-visible {
 /* INDICADOR VISUAL PARA CÉLULAS SELECIONÁVEIS */
 .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label) {
     position: relative;
+    overflow: hidden; /* Garantir que o pseudo-elemento não vaze */
 }
 
-/* MENSAGEM COM ANIMAÇÃO SUAVE */
-.fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+/* MENSAGEM "CLIQUE E SEGURE" - CORRIGIDO */
+.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
     content: 'clique e segure';
     position: absolute;
     top: 50%;
@@ -549,17 +551,24 @@ select:focus-visible {
     font-size: 11px;
     color: rgba(0, 0, 0, 0.3);
     font-weight: 300;
-    opacity: 0;
+    opacity: 0; /* Começa invisível */
     pointer-events: none;
-    z-index: 1;
+    z-index: 2;
     text-transform: lowercase;
     font-style: italic;
     text-align: center;
     white-space: nowrap;
-    text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
-    animation: gentlePulse 4s infinite;
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.9);
+    transition: opacity 0.5s ease;
+    width: max-content;
 }
 
+/* Mostrar a mensagem no hover (desktop) */
+.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):hover::before {
+    opacity: 0.6;
+}
+
+/* ANIMAÇÃO DE PULSAÇÃO */
 @keyframes gentlePulse {
     0%, 100% { 
         opacity: 0.3;
@@ -571,25 +580,29 @@ select:focus-visible {
     }
 }
 
-/* Mobile - animação mais visível */
+/* Mobile - mostrar a mensagem sempre com animação */
 @media (max-width: 768px) {
-    .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
-        opacity: 0.4;
+    .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+        opacity: 0.4; /* Visível por padrão no mobile */
         font-size: 10px;
-        animation: mobileGentlePulse 5s infinite;
+        animation: gentlePulse 4s infinite;
+        text-shadow: 0 0 4px rgba(255, 255, 255, 1),
+                     0 0 3px rgba(255, 255, 255, 0.8);
     }
     
-    @keyframes mobileGentlePulse {
-        0%, 100% { 
-            opacity: 0.4;
-            transform: translate(-50%, -50%) scale(0.97);
-        }
-        50% { 
-            opacity: 0.6;
-            transform: translate(-50%, -50%) scale(1);
-        }
+    /* Esconder durante o toque ativo */
+    .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label).touch-active::before {
+        opacity: 0;
+        animation: none;
+        transition: opacity 0.1s ease;
+    }
+    
+    /* Melhorar contraste para mobile */
+    .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+        color: rgba(0, 0, 0, 0.4);
     }
 }
+
 /* MELHORAR VISUALIZAÇÃO MOBILE */
 @media (max-width: 768px) {
     .fc .fc-timegrid-slot {
@@ -603,16 +616,15 @@ select:focus-visible {
         line-height: 1.4 !important;
     }
     
-    .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):after {
-        width: 10px;
-        height: 10px;
-        top: 5px;
-        right: 5px;
-    }
-    
     /* ÁREA DE CLIQUE MAIOR */
     .fc .fc-timegrid-col.fc-day-today {
         background-color: rgba(230, 126, 34, 0.1) !important;
+    }
+    
+    /* Garantir que a mensagem seja visível */
+    .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+        opacity: 0.5 !important;
+        font-size: 9px;
     }
 }
 
@@ -652,3 +664,51 @@ select:focus-visible {
     background-color: #27ae60;
 }
 
+/* GARANTIR QUE O CALENDÁRIO TENHA ESPAÇO SUFICIENTE */
+#calendar, #admin-calendar {
+    min-height: 500px;
+}
+
+/* MELHORAR A LEGIBILIDADE DA MENSAGEM */
+.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 0.5px;
+}
+
+/* ADICIONAR ESTILOS PARA O MODO ESCURO (se aplicável) */
+@media (prefers-color-scheme: dark) {
+    .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+        color: rgba(255, 255, 255, 0.4);
+        text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+    }
+}
+
+/* CORREÇÃO PARA Z-INDEX - garantir que a mensagem fique acima de outros elementos */
+.fc-timegrid-slot {
+    isolation: isolate; /* Criar novo contexto de empilhamento */
+}
+
+.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+    z-index: 10; /* Valor alto para garantir visibilidade */
+}
+
+/* SE AINDA NÃO ESTIVER APARECENDO, ADICIONAR ESTE OVERRIDE */
+.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* CONTROLE DE OPACIDADE COM VARIÁVEL CSS */
+:root {
+    --hint-opacity: 0.3;
+}
+
+.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+    opacity: var(--hint-opacity) !important;
+}
+
+@media (max-width: 768px) {
+    :root {
+        --hint-opacity: 0.5;
+    }
+}
