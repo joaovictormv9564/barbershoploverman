@@ -509,6 +509,7 @@ async function initializeClientCalendar() {
     // Criar e renderizar o calendário
     clientCalendar = new FullCalendar.Calendar(calendarEl, calendarOptions);
     clientCalendar.render();
+    setTimeout(setupMobileClickFix, 500);
     
     console.log('Calendário renderizado com sucesso');
 
@@ -576,59 +577,7 @@ function setupResizeEvents() {
 }
 
 // Função para confirmar agendamento
-async function confirmAppointment(barberId, date, time) {
-    console.log('Confirmando agendamento:', { barberId, date, time });
-    
-    // Verificar disponibilidade
-    const isAvailable = await checkAppointmentAvailability(barberId, date, time);
-    if (!isAvailable) {
-        alert('Este horário já está ocupado. Por favor, escolha outro horário.');
-        return;
-    }
-    
-    // Confirmar com o usuário
-    const userConfirmed = confirm(`Confirmar agendamento para ${date} às ${time}?`);
-    if (!userConfirmed) {
-        return;
-    }
-    
-    try {
-        console.log('Criando agendamento...');
-        const response = await fetch('/api/appointments', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${user.token || ''}`
-            },
-            body: JSON.stringify({ 
-                date, 
-                time, 
-                barber_id: barberId, 
-                client_id: user.id 
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao criar agendamento');
-        }
-        
-        alert('✅ Agendamento realizado com sucesso!');
-        
-        // Atualizar a interface
-        if (clientCalendar) {
-            clientCalendar.refetchEvents();
-        }
-        
-        loadDates();
-        updateTimeSelect();
-        
-    } catch (error) {
-        console.error('Erro ao criar agendamento:', error);
-        alert('❌ Erro ao criar agendamento: ' + error.message);
-    }
-}
+setTimeout(initializeClientCalendar, 100);
 
 // Carregar datas disponíveis
 function loadDates() {
@@ -769,7 +718,75 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeClientCalendar();
     }
 });
+function setupMobileClickFix() {
+    const calendarEl = document.getElementById('calendar');
+    if (!calendarEl) return;
+    
+    // Event listener específico para mobile
+    calendarEl.addEventListener('click', function(e) {
+        // Verificar se é mobile
+        if (window.innerWidth > 768) return;
+        
+        const target = e.target;
+        
+        // Verificar se o clique foi em uma célula de tempo
+        const timeSlot = target.closest('.fc-timegrid-slot');
+        if (timeSlot && !target.closest('.fc-event')) {
+            // Simular o evento de seleção do FullCalendar
+            const rect = timeSlot.getBoundingClientRect();
+            const fakeMouseEvent = {
+                clientX: rect.left + rect.width / 2,
+                clientY: rect.top + rect.height / 2,
+                target: timeSlot,
+                preventDefault: () => {},
+                stopPropagation: () => {}
+            };
+            
+            // Disparar o evento de seleção manualmente
+            if (clientCalendar) {
+                const dateStr = timeSlot.getAttribute('data-date');
+                const timeStr = timeSlot.getAttribute('data-time');
+                
+                if (dateStr && timeStr) {
+                    const startStr = `${dateStr}T${timeStr}`;
+                    const fakeSelectInfo = {
+                        startStr: startStr,
+                        endStr: `${dateStr}T${add30Minutes(timeStr)}`,
+                        start: new Date(startStr),
+                        end: new Date(`${dateStr}T${add30Minutes(timeStr)}`),
+                        jsEvent: fakeMouseEvent,
+                        view: clientCalendar.view
+                    };
+                    
+                    // Chamar a função de seleção manualmente
+                    clientCalendar.getOption('select')(fakeSelectInfo);
+                }
+            }
+        }
+    });
+    
+    // Preencher os dados das células
+    setTimeout(() => {
+        const slots = document.querySelectorAll('.fc-timegrid-slot');
+        slots.forEach(slot => {
+            const date = slot.closest('[data-date]');
+            const time = slot.querySelector('.fc-timegrid-slot-label');
+            if (date && time) {
+                slot.setAttribute('data-date', date.getAttribute('data-date'));
+                slot.setAttribute('data-time', time.textContent.trim());
+            }
+        });
+    }, 1000);
+}
 
+// Função auxiliar para adicionar 30 minutos
+function add30Minutes(timeStr) {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours);
+    date.setMinutes(minutes + 30);
+    return date.toTimeString().slice(0, 5);
+}
 
 // Inicializa o calendário do admin
 async function initializeAdminCalendar() {
