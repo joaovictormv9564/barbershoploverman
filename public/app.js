@@ -665,7 +665,7 @@ async function createAppointment(barberId, date, time) {
         
     } catch (error) {
         console.error('Erro ao criar agendamento:', error);
-        alert('❌ Erro ao criar agendamento: ' + error.message);
+        alert('❌ Anote sua Data, Para não esquecer ' + error.message);
     }
 }
 
