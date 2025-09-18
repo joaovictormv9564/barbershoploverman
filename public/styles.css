@@ -539,49 +539,17 @@ select:focus-visible {
     position: relative;
 }
 
-/* Adicione este CSS ao seu arquivo styles.css */
-.fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):after {
     content: 'clique e segure';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 11px;
-    color: rgba(0, 0, 0, 0.3);
-    font-weight: 300;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background-color: rgba(46, 204, 113, 0.5);
+    border-radius: 50%;
     opacity: 0;
     transition: opacity 0.3s ease;
-    pointer-events: none;
-    z-index: 1;
-    text-transform: lowercase;
-    font-style: italic;
-}
-
-.fc-timegrid-slot:not(.fc-timegrid-slot-label):hover::before {
-    opacity: 1;
-}
-
-/* Para mobile - mostrar sempre a mensagem */
-@media (max-width: 768px) {
-    .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
-        opacity: 0.4;
-        font-size: 10px;
-    }
-    
-    .fc-timegrid-slot:not(.fc-timegrid-slot-label).touch-active::before {
-        opacity: 0;
-    }
-}
-
-/* Melhorar a visibilidade da mensagem em fundos escuros */
-.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
-    text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
-}
-
-/* Feedback visual durante o toque */
-.fc-timegrid-slot.touch-active {
-    background-color: rgba(52, 152, 219, 0.2) !important;
-    transition: background-color 0.2s ease;
 }
 
 .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):hover:after {
