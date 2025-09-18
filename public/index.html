@@ -87,15 +87,11 @@
         }
 
 
-        .metallic-title {
-            background: linear-gradient(45deg, 
-                #888888, #cccccc, #ffffff, #aaaaaa, #888888);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: chromeShift 4s ease infinite,
-                     subtlePulse 3s ease-in-out infinite;
+       .depth-title {
+            color: #666666;
+            animation: depthEffect 4s ease-in-out infinite;
+            perspective: 1000px;
+            transform-style: preserve-3d;
         }
 
         .minimal-title::before {
@@ -378,7 +374,7 @@
 <body>
     <header><div class="title-container">
            
- <h1 class="elegant-title chrome-title">Loverman Barbershop</h1> 
+ <h1 class="elegant-title depth-title">Loverman Barbershop</h1>
         </div>
     </header>
     <main>
