@@ -15,6 +15,143 @@
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
+         /* ANIMAÇÕES EM PRETO E CINZA */
+        @keyframes elegantGlow {
+            0%, 100% {
+                text-shadow: 0 0 10px rgba(255, 255, 255, 0.1),
+                           0 0 20px rgba(255, 255, 255, 0.05),
+                           0 0 30px rgba(255, 255, 255, 0.02);
+            }
+            50% {
+                text-shadow: 0 0 15px rgba(255, 255, 255, 0.2),
+                           0 0 30px rgba(255, 255, 255, 0.1),
+                           0 0 45px rgba(255, 255, 255, 0.05);
+            }
+        }
+
+        @keyframes subtlePulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.02);
+                opacity: 0.95;
+            }
+        }
+
+        @keyframes chromeShift {
+            0% {
+                background-position: 0% 50%;
+                filter: brightness(100%);
+            }
+            50% {
+                background-position: 100% 50%;
+                filter: brightness(120%);
+            }
+            100% {
+                background-position: 0% 50%;
+                filter: brightness(100%);
+            }
+        }
+
+        @keyframes metallicShine {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        @keyframes depthEffect {
+            0%, 100% {
+                transform: translateZ(0);
+                text-shadow: 0 0 0 rgba(255, 255, 255, 0);
+            }
+            50% {
+                transform: translateZ(20px);
+                text-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        /* ESTILOS DO TÍTULO */
+        .elegant-title {
+            font-size: 2.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-align: center;
+            margin: 0;
+            padding: 20px 0;
+        }
+
+
+        /* VERSÃO 6: ANIMAÇÃO MINIMALISTA */
+        .minimal-title {
+            color: #cccccc;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .minimal-title::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shineEffect 3s infinite;
+        }
+
+        @keyframes shineEffect {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* RESPONSIVO */
+        @media (max-width: 768px) {
+            .elegant-title {
+                font-size: 2.2em;
+                letter-spacing: 2px;
+                padding: 15px 0;
+            }
+            
+            .metallic-title,
+            .chrome-title,
+            .brushed-title {
+                background-size: 150% 150%;
+            }
+        }
+
+        /* EFEITOS EXTRAS */
+        .title-container {
+            background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid #333333;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ANIMAÇÃO DE ENTRADA */
+        @keyframes titleEntrance {
+            from {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.9);
+                filter: blur(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        .elegant-title {
+            animation: titleEntrance 1.2s ease-out forwards;
+        }
         /* Estilos adicionais para os controles */
         .calendar-controls {
             margin: 15px 0;
@@ -399,6 +536,50 @@
 
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <script src="app.js"></script>
+    <script>
+        // Efeito de interação com o mouse
+        document.addEventListener('DOMContentLoaded', function() {
+            const title = document.querySelector('.elegant-title');
+            
+            if (title) {
+                // Efeito de parallax suave
+                document.addEventListener('mousemove', function(e) {
+                    const x = (window.innerWidth / 2 - e.clientX) / 25;
+                    const y = (window.innerHeight / 2 - e.clientY) / 25;
+                    title.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${y}deg)`;
+                });
+
+                // Reset da posição quando o mouse sair
+                document.addEventListener('mouseleave', function() {
+                    title.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg)';
+                });
+            }
+        });
+
+        // Alternar entre animações (opcional)
+        function cycleAnimations() {
+            const titles = [
+                'metallic-title',
+                'chrome-title', 
+                'depth-title',
+                'glow-title',
+                'brushed-title',
+                'minimal-title'
+            ];
+            
+            let currentIndex = 0;
+            const titleElement = document.querySelector('.elegant-title');
+            
+            setInterval(() => {
+                titleElement.classList.remove(...titles);
+                titleElement.classList.add(titles[currentIndex]);
+                currentIndex = (currentIndex + 1) % titles.length;
+            }, 5000);
+        }
+
+        // Descomente para ciclar automaticamente entre animações
+        // cycleAnimations();
+    </script>
         <footer class="footer">
         <div class="footer-content">
             <div class="footer-logo">
@@ -416,7 +597,7 @@
             </a>
             
             <div class="footer-copyright">
-                © 2024 JVCONECT - Todos os direitos reservados
+                © 2025 JVCONECT - Todos os direitos reservados
             </div>
         </div>
     </footer>
