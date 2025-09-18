@@ -512,7 +512,53 @@ async function initializeClientCalendar() {
     clientCalendar = new FullCalendar.Calendar(calendarEl, calendarOptions);
     clientCalendar.render();
     
-    console.log('Calendário renderizado com sucesso');
+     console.log('Calendário renderizado com sucesso');
+
+    // Configurar eventos
+    setupSelectEvents();
+    setupResizeEvents();
+    
+    // ADICIONAR SUPORTE MOBILE - LINHA NOVA
+    if (window.innerWidth <= 768) {
+        setTimeout(setupMobileTouchSupport, 1000);
+    }
+    
+    // Configurar o select de barbeiro
+    barberSelect.addEventListener('change', () => {
+        if (clientCalendar) {
+            clientCalendar.refetchEvents();
+        }
+        loadDates();
+    });
+
+    loadDates();
+}
+
+// Função para preencher dados das células (importante para mobile)
+function setupCalendarDataAttributes() {
+    setTimeout(() => {
+        const slots = document.querySelectorAll('.fc-timegrid-slot');
+        const lanes = document.querySelectorAll('.fc-timegrid-col');
+        
+        lanes.forEach(lane => {
+            const date = lane.getAttribute('data-date');
+            if (date) {
+                const timeSlots = lane.querySelectorAll('.fc-timegrid-slot:not(.fc-timegrid-slot-label)');
+                timeSlots.forEach((slot, index) => {
+                    const timeLabel = slot.querySelector('.fc-timegrid-slot-label');
+                    if (timeLabel) {
+                        slot.setAttribute('data-date', date);
+                        slot.setAttribute('data-time', timeLabel.textContent.trim());
+                    }
+                });
+            }
+        });
+    }, 2000);
+}
+
+// Chamar a função de setup dos dados
+setupCalendarDataAttributes();
+    
 
     // Configurar eventos
     setupSelectEvents();
@@ -528,7 +574,7 @@ async function initializeClientCalendar() {
     });
 
     loadDates();
-}
+
 
 // Configurar eventos dos selects
 function setupSelectEvents() {
@@ -817,6 +863,137 @@ function add30Minutes(timeStr) {
     date.setHours(hours);
     date.setMinutes(minutes + 30);
     return date.toTimeString().slice(0, 5);
+}
+function setupMobileTouchSupport() {
+    const calendarEl = document.getElementById('calendar');
+    if (!calendarEl) return;
+    
+    let touchStartTime = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    // Evento de toque inicial
+    calendarEl.addEventListener('touchstart', function(e) {
+        touchStartTime = Date.now();
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        
+        // Adicionar classe de feedback visual
+        const target = e.target;
+        const timeSlot = target.closest('.fc-timegrid-slot');
+        if (timeSlot && !target.closest('.fc-event')) {
+            timeSlot.classList.add('touch-active');
+        }
+    }, { passive: true });
+    
+    // Evento de toque final
+    calendarEl.addEventListener('touchend', function(e) {
+        const touchEndTime = Date.now();
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        
+        // Calcular distância e tempo do toque
+        const deltaX = Math.abs(touchEndX - touchStartX);
+        const deltaY = Math.abs(touchEndY - touchStartY);
+        const deltaTime = touchEndTime - touchStartTime;
+        
+        // Remover classe de feedback visual
+        const allSlots = document.querySelectorAll('.fc-timegrid-slot');
+        allSlots.forEach(slot => slot.classList.remove('touch-active'));
+        
+        // Verificar se foi um toque (não um swipe)
+        if (deltaTime < 300 && deltaX < 10 && deltaY < 10) {
+            const target = e.target;
+            const timeSlot = target.closest('.fc-timegrid-slot');
+            
+            if (timeSlot && !target.closest('.fc-event')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Encontrar data e hora da célula tocada
+                const slotLane = timeSlot.closest('.fc-timegrid-col');
+                if (slotLane) {
+                    const date = slotLane.getAttribute('data-date');
+                    const timeLabel = timeSlot.querySelector('.fc-timegrid-slot-label');
+                    
+                    if (date && timeLabel) {
+                        const time = timeLabel.textContent.trim();
+                        handleMobileTimeSelection(date, time);
+                    }
+                }
+            }
+        }
+    }, { passive: false });
+}
+
+// Função para lidar com seleção de horário no mobile
+async function handleMobileTimeSelection(date, time) {
+    console.log('Seleção mobile:', date, time);
+    
+    const barberSelect = document.getElementById('barber-select');
+    const barberId = barberSelect.value;
+    
+    if (!barberId) {
+        alert('📋 Selecione um barbeiro primeiro');
+        return;
+    }
+    
+    // Mostrar feedback visual de carregamento
+    showMobileLoading(date, time);
+    
+    try {
+        // Verificar disponibilidade
+        const isAvailable = await checkAppointmentAvailability(barberId, date, time);
+        
+        if (!isAvailable) {
+            alert('❌ Este horário já está ocupado');
+            hideMobileLoading();
+            return;
+        }
+        
+        // Confirmar agendamento
+        const userConfirmed = confirm(`💈 Agendar para ${date} às ${time}?`);
+        
+        if (userConfirmed) {
+            await createAppointment(barberId, date, time);
+        }
+        
+    } catch (error) {
+        console.error('Erro no mobile:', error);
+        alert('❌ Erro ao verificar disponibilidade');
+    } finally {
+        hideMobileLoading();
+    }
+}
+
+// Feedback visual para mobile
+function showMobileLoading(date, time) {
+    // Criar overlay de carregamento
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'mobile-loading';
+    loadingOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        color: white;
+        font-size: 18px;
+    `;
+    loadingOverlay.innerHTML = `⏳ Verificando ${date} ${time}...`;
+    document.body.appendChild(loadingOverlay);
+}
+
+function hideMobileLoading() {
+    const loading = document.getElementById('mobile-loading');
+    if (loading) {
+        loading.remove();
+    }
 }
 
 // Inicializa o calendário do admin
