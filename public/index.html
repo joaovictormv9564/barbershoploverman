@@ -87,11 +87,15 @@
         }
 
 
-        /* VERSÃO 6: ANIMAÇÃO MINIMALISTA */
-        .minimal-title {
-            color: #cccccc;
-            position: relative;
-            overflow: hidden;
+        .brushed-title {
+            background: 
+                linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%),
+                linear-gradient(135deg, #333333, #666666, #333333);
+            background-size: 200% 200%, 100% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: chromeShift 5s ease infinite;
         }
 
         .minimal-title::before {
@@ -374,8 +378,7 @@
 <body>
     <header><div class="title-container">
            
-            <!-- Versão 6: Minimalista -->
-            <h1 class="elegant-title minimal-title">Loverman Barbershop</h1>
+   <h1 class="elegant-title brushed-title">Loverman Barbershop</h1>
         </div>
     </header>
     <main>
