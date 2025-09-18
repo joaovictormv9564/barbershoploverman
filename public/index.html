@@ -87,15 +87,15 @@
         }
 
 
-        .brushed-title {
-            background: 
-                linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%),
-                linear-gradient(135deg, #333333, #666666, #333333);
-            background-size: 200% 200%, 100% 100%;
+        .metallic-title {
+            background: linear-gradient(45deg, 
+                #888888, #cccccc, #ffffff, #aaaaaa, #888888);
+            background-size: 200% 200%;
             -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             background-clip: text;
-            color: transparent;
-            animation: chromeShift 5s ease infinite;
+            animation: chromeShift 4s ease infinite,
+                     subtlePulse 3s ease-in-out infinite;
         }
 
         .minimal-title::before {
@@ -378,7 +378,7 @@
 <body>
     <header><div class="title-container">
            
-   <h1 class="elegant-title brushed-title">Loverman Barbershop</h1>
+ <h1 class="elegant-title chrome-title">Loverman Barbershop</h1> 
         </div>
     </header>
     <main>
