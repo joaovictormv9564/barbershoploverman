@@ -539,23 +539,57 @@ select:focus-visible {
     position: relative;
 }
 
-.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):after {
+/* MENSAGEM COM ANIMAÇÃO SUAVE */
+.fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
     content: 'clique e segure';
     position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 8px;
-    height: 8px;
-    background-color: rgba(46, 204, 113, 0.5);
-    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.3);
+    font-weight: 300;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+    text-transform: lowercase;
+    font-style: italic;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+    animation: gentlePulse 4s infinite;
 }
 
-.fc .fc-timegrid-slot:not(.fc-timegrid-slot-label):hover:after {
-    opacity: 1;
+@keyframes gentlePulse {
+    0%, 100% { 
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(0.95);
+    }
+    50% { 
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(1);
+    }
 }
 
+/* Mobile - animação mais visível */
+@media (max-width: 768px) {
+    .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
+        opacity: 0.4;
+        font-size: 10px;
+        animation: mobileGentlePulse 5s infinite;
+    }
+    
+    @keyframes mobileGentlePulse {
+        0%, 100% { 
+            opacity: 0.4;
+            transform: translate(-50%, -50%) scale(0.97);
+        }
+        50% { 
+            opacity: 0.6;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+}
 /* MELHORAR VISUALIZAÇÃO MOBILE */
 @media (max-width: 768px) {
     .fc .fc-timegrid-slot {
