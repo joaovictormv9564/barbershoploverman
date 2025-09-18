@@ -394,37 +394,13 @@ async function initializeClientCalendar() {
         slotDuration: '00:30:00',
         selectable: true,
         selectOverlap: false,
-         // CONFIGURAÇÕES RESPONSIVAS
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'timeGridDay,timeGridWeek'
+        
+        // CONFIGURAÇÃO IMPORTANTE: Permitir seleção
+        selectAllow: function(selectInfo) {
+            // Permitir seleção apenas se não for evento existente
+            return !selectInfo.event;
         },
         
-        // Melhorias para mobile
-        allDaySlot: false,
-        dayMaxEvents: true,
-        height: 'auto',
-        contentHeight: 'auto',
-        
-        // Ajustes de visualização mobile
-        views: {
-            timeGridWeek: {
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                },
-                dayHeaderFormat: { weekday: 'short', day: 'numeric' }
-            },
-            timeGridDay: {
-                slotLabelFormat: {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                }
-            }
-        },
         events: async (info, successCallback) => {
             const barberId = barberSelect.value;
             if (!barberId) {
@@ -434,6 +410,8 @@ async function initializeClientCalendar() {
             const events = await loadAppointments(barberId, false);
             successCallback(events);
         },
+        
+        // FUNÇÃO DE SELEÇÃO (CLIQUE EM CÉLULA VAZIA) - AGENDAR
         select: async function(info) {
             const barberId = barberSelect.value;
             if (!barberId) {
@@ -474,7 +452,7 @@ async function initializeClientCalendar() {
                     
                     alert('Agendamento realizado com sucesso');
                     clientCalendar.refetchEvents();
-                    loadDates(); // Recarrega as datas disponíveis
+                    loadDates();
                 } catch (error) {
                     console.error('Erro ao criar agendamento:', error);
                     alert('Erro ao criar agendamento');
@@ -482,9 +460,45 @@ async function initializeClientCalendar() {
             }
             clientCalendar.unselect();
         },
+        
+        // FUNÇÃO DE CLIQUE EM EVENTO EXISTENTE - VISUALIZAR
         eventClick: function(info) {
             const { barberName, clientName } = info.event.extendedProps;
             alert(`Horário Ocupado\nBarbeiro: ${barberName}\nCliente: ${clientName}`);
+            
+            // Impedir que o calendário tente selecionar o evento
+            info.jsEvent.preventDefault();
+            info.jsEvent.stopPropagation();
+        },
+        
+        // CONFIGURAÇÕES RESPONSIVAS PARA MOBILE
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'timeGridDay,timeGridWeek'
+        },
+        
+        allDaySlot: false,
+        dayMaxEvents: true,
+        height: 'auto',
+        
+        // Melhorar visualização mobile
+        views: {
+            timeGridWeek: {
+                slotLabelFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                },
+                dayHeaderFormat: { weekday: 'short', day: 'numeric' }
+            },
+            timeGridDay: {
+                slotLabelFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                }
+            }
         }
     });
     
@@ -495,13 +509,34 @@ async function initializeClientCalendar() {
         if (clientCalendar) {
             clientCalendar.refetchEvents();
         }
-        loadDates(); // Carrega datas quando muda o barbeiro
+        loadDates();
     });
 
     // Inicializar selects de data e hora
     loadDates();
     setupAppointmentBooking();
 }
+// Adicionar esta função para melhorar a experiência mobile
+function setupMobileCalendar() {
+    if (window.innerWidth <= 768) {
+        // Ajustes específicos para mobile
+        const calendarEl = document.getElementById('calendar');
+        if (calendarEl) {
+            calendarEl.style.minHeight = '70vh';
+        }
+        
+        // Melhorar a área de clique para mobile
+        const events = document.querySelectorAll('.fc-event');
+        events.forEach(event => {
+            event.style.minHeight = '35px';
+            event.style.padding = '8px';
+        });
+    }
+}
+
+// Chamar a função quando a janela for redimensionada
+window.addEventListener('resize', setupMobileCalendar);
+window.addEventListener('load', setupMobileCalendar);
 
 // Verificar disponibilidade de horário
 async function checkAppointmentAvailability(barberId, date, time) {
