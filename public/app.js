@@ -395,7 +395,10 @@ async function initializeClientCalendar() {
         selectable: true,
         selectOverlap: false,
         
-        // CONFIGURAÇÃO IMPORTANTE: Permitir seleção
+        // Configuração importante para mobile
+        selectMirror: true,
+        selectMinDistance: 5, // Reduzir distância mínima para seleção no mobile
+        
         selectAllow: function(selectInfo) {
             // Permitir seleção apenas se não for evento existente
             return !selectInfo.event;
@@ -411,8 +414,10 @@ async function initializeClientCalendar() {
             successCallback(events);
         },
         
-        // FUNÇÃO DE SELEÇÃO (CLIQUE EM CÉLULA VAZIA) - AGENDAR
+        // FUNÇÃO DE SELEÇÃO (CLIQUE/TOQUE EM CÉLULA VAZIA)
         select: async function(info) {
+            console.log('Seleção detectada:', info.startStr);
+            
             const barberId = barberSelect.value;
             if (!barberId) {
                 alert('Selecione um barbeiro antes de escolher um horário');
@@ -423,7 +428,7 @@ async function initializeClientCalendar() {
             const date = info.startStr.split('T')[0];
             const time = info.startStr.split('T')[1].substring(0, 5);
             
-            // Verificar se o horário já está ocupado
+            // Verificar disponibilidade
             const isAvailable = await checkAppointmentAvailability(barberId, date, time);
             if (!isAvailable) {
                 alert('Este horário já está ocupado. Por favor, escolha outro horário.');
@@ -431,7 +436,9 @@ async function initializeClientCalendar() {
                 return;
             }
             
-            if (confirm(`Deseja agendar com o barbeiro no dia ${date} às ${time}?`)) {
+            // Usar confirm mais amigável para mobile
+            const userConfirmed = confirm(`Agendar para ${date} às ${time}?`);
+            if (userConfirmed) {
                 try {
                     const response = await fetch('/api/appointments', {
                         method: 'POST',
@@ -450,28 +457,31 @@ async function initializeClientCalendar() {
                         return;
                     }
                     
-                    alert('Agendamento realizado com sucesso');
+                    alert('✅ Agendamento realizado com sucesso!');
                     clientCalendar.refetchEvents();
                     loadDates();
                 } catch (error) {
                     console.error('Erro ao criar agendamento:', error);
-                    alert('Erro ao criar agendamento');
+                    alert('❌ Erro ao criar agendamento');
                 }
             }
             clientCalendar.unselect();
         },
         
-        // FUNÇÃO DE CLIQUE EM EVENTO EXISTENTE - VISUALIZAR
+        // FUNÇÃO DE CLIQUE EM EVENTO EXISTENTE
         eventClick: function(info) {
+            console.log('Clique em evento detectado');
             const { barberName, clientName } = info.event.extendedProps;
-            alert(`Horário Ocupado\nBarbeiro: ${barberName}\nCliente: ${clientName}`);
             
-            // Impedir que o calendário tente selecionar o evento
+            // Alert mais amigável para mobile
+            alert(`⏰ Horário Ocupado\n💈 Barbeiro: ${barberName}\n👤 Cliente: ${clientName}`);
+            
             info.jsEvent.preventDefault();
             info.jsEvent.stopPropagation();
+            return false;
         },
         
-        // CONFIGURAÇÕES RESPONSIVAS PARA MOBILE
+        // Configurações para melhorar experiência mobile
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -482,7 +492,13 @@ async function initializeClientCalendar() {
         dayMaxEvents: true,
         height: 'auto',
         
-        // Melhorar visualização mobile
+        // Otimizações para mobile
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        },
+        
         views: {
             timeGridWeek: {
                 slotLabelFormat: {
@@ -497,11 +513,72 @@ async function initializeClientCalendar() {
                     hour: '2-digit',
                     minute: '2-digit',
                     hour12: false
-                }
+                },
+                dayHeaderFormat: { weekday: 'short', month: 'short', day: 'numeric' }
             }
         }
     });
     
+    clientCalendar.render();
+    
+    // Adicionar event listeners específicos para mobile
+    setupMobileTouchEvents(calendarEl);
+    
+    barberSelect.addEventListener('change', () => {
+        if (clientCalendar) {
+            clientCalendar.refetchEvents();
+        }
+        loadDates();
+    });
+
+    loadDates();
+    setupAppointmentBooking();
+}
+
+// FUNÇÃO ESPECÍFICA PARA LIDAR COM TOUCH EVENTS NO MOBILE
+function setupMobileTouchEvents(calendarEl) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    
+    calendarEl.addEventListener('touchstart', function(e) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+    }, { passive: true });
+    
+    calendarEl.addEventListener('touchend', function(e) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const touchEndTime = Date.now();
+        
+        const deltaX = Math.abs(touchEndX - touchStartX);
+        const deltaY = Math.abs(touchEndY - touchStartY);
+        const deltaTime = touchEndTime - touchStartTime;
+        
+        // Se foi um toque rápido (não um swipe) e movimento pequeno
+        if (deltaTime < 300 && deltaX < 10 && deltaY < 10) {
+            const target = e.target;
+            
+            // Verificar se o clique foi em uma célula do calendário
+            const timeSlot = target.closest('.fc-timegrid-slot');
+            const event = target.closest('.fc-event');
+            
+            if (timeSlot && !event) {
+                // Simular clique para seleção
+                timeSlot.click();
+            }
+        }
+    }, { passive: true });
+    
+    // Melhorar acessibilidade para mobile
+    calendarEl.addEventListener('click', function(e) {
+        const target = e.target;
+        if (target.closest('.fc-event')) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
     clientCalendar.render();
     
     // Configurar o select de barbeiro para recarregar o calendário
