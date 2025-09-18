@@ -541,7 +541,7 @@ select:focus-visible {
     overflow: hidden; /* Garantir que o pseudo-elemento não vaze */
 }
 
-/* MENSAGEM "CLIQUE E SEGURE" - CORRIGIDO */
+/* MENSAGEM "CLIQUE E SEGURE"  */
 .fc .fc-timegrid-slot:not(.fc-timegrid-slot-label)::before {
     content: 'clique e segure';
     position: absolute;
@@ -683,7 +683,7 @@ select:focus-visible {
     }
 }
 
-/* CORREÇÃO PARA Z-INDEX - garantir que a mensagem fique acima de outros elementos */
+
 .fc-timegrid-slot {
     isolation: isolate; /* Criar novo contexto de empilhamento */
 }
