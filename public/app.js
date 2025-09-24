@@ -374,8 +374,6 @@ async function updateTimeSelect() {
         timeSelect.innerHTML = '<option value="">Erro ao carregar</option>';
     }
 }
-// Inicializa o calendário do cliente
-
 async function initializeClientCalendar() {
     console.log('Inicializando calendário do cliente...');
     
@@ -628,29 +626,6 @@ function setupMobileClickSupport() {
         }
     });
 }
-function enableClickToScheduleMobile() {
-    const scheduleElements = document.querySelectorAll('.schedule-time');
-    scheduleElements.forEach(element => {
-        element.addEventListener('click', function(e) {
-            if (window.innerWidth <= 768) { // Considera mobile até 768px
-                this.classList.toggle('scheduled');
-                scheduleAppointment(this.dataset.time); // Função hipotética para agendar
-                e.preventDefault();
-            }
-        }, { passive: false }); // Impede comportamento padrão de long press
-    });
-}
-
-// Função exemplo para agendar (substitua pela sua lógica real)
-function scheduleAppointment(time) {
-    console.log(`Agendado para: ${time}`);
-}
-
-// Chama a função ao carregar a página
-window.addEventListener('load', enableClickToScheduleMobile);
-
-// Reaplica ao redimensionar a janela
-window.addEventListener('resize', enableClickToScheduleMobile);
 
 // Simular seleção do calendário para mobile
 function handleMobileTimeSelection(date, time) {
@@ -861,7 +836,7 @@ async function checkAppointmentAvailability(barberId, date, time) {
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
     loadDates();
-    
+    setupMobileClickSupport(); // Adiciona suporte a clique no mobile
     if (document.getElementById('client-section').style.display !== 'none') {
         initializeClientCalendar();
     }
@@ -875,7 +850,6 @@ function add30Minutes(timeStr) {
     date.setMinutes(minutes + 30);
     return date.toTimeString().slice(0, 5);
 }
-
 // Inicializa o calendário do admin
 async function initializeAdminCalendar() {
     const calendarEl = document.getElementById('admin-calendar');
