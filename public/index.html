@@ -566,7 +566,15 @@
         <select id="admin-barber-select" style="width: 200px; padding: 5px; margin-right: 10px;">
             <option value="">Selecione um barbeiro</option>
         </select>
-        <input type="date" id="admin-appointment-date" style="width: 200px; padding: 5px; margin-right: 10px;">
+        <select id="admin-day-of-week" style="width: 200px; padding: 5px; margin-right: 10px;">
+            <option value="">Selecione o dia da semana</option>
+            <option value="1">Segunda</option>
+            <option value="2">Terça</option>
+            <option value="3">Quarta</option>
+            <option value="4">Quinta</option>
+            <option value="5">Sexta</option>
+            <option value="6">Sábado</option>
+        </select>
         <input type="time" id="admin-appointment-time" step="1800" style="width: 200px; padding: 5px;">
     </div>
     <button onclick="createRecurringAdminAppointment()" style="margin-top: 10px; padding: 5px 10px;">Marcar Recorrente</button>

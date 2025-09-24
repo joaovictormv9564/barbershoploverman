@@ -1219,25 +1219,12 @@ async function createAdminAppointment() {
     }
 }
 
-// Função para carregar clientes (corrigida para preencher o select)
+// Função para carregar clientes
 async function loadClients() {
     try {
         const response = await fetch('/api/users');
+        if (!response.ok) throw new Error('Erro ao carregar clientes');
         const users = await response.json();
-        const tableBody = document.querySelector('#clients-table tbody');
-        tableBody.innerHTML = '';
-        users.forEach(user => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${user.id}</td>
-                <td>${user.username}</td>
-                <td>${user.name || ''}</td>
-                <td>${user.phone || ''}</td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        // Preencher o select de clientes
         const adminClientSelect = document.getElementById('admin-client-select');
         if (adminClientSelect) {
             adminClientSelect.innerHTML = '<option value="">Selecione um cliente</option>';
@@ -1254,28 +1241,12 @@ async function loadClients() {
     }
 }
 
-// Função para carregar barbeiros para o admin (corrigida para preencher o select)
+// Função para carregar barbeiros
 async function loadBarbersForAdmin() {
     try {
-        // Carrega barbeiros
-        const barberResponse = await fetch('/api/barbers');
-        const barbers = await barberResponse.json();
-        const tableBody = document.querySelector('#admin-section table#barbers-table tbody');
-        tableBody.innerHTML = '';
-        barbers.forEach(barber => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${barber.id}</td>
-                <td>${barber.name}</td>
-                <td>
-                    <button onclick="editBarber(${barber.id}, '${barber.name.replace(/'/g, "\\'")}')">Editar</button>
-                    <button onclick="deleteBarber(${barber.id})">Remover</button>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        // Carrega barbeiros no select
+        const response = await fetch('/api/barbers');
+        if (!response.ok) throw new Error('Erro ao carregar barbeiros');
+        const barbers = await response.json();
         const adminBarberSelect = document.getElementById('admin-barber-select');
         if (adminBarberSelect) {
             adminBarberSelect.innerHTML = '<option value="">Selecione um barbeiro</option>';
@@ -1286,64 +1257,73 @@ async function loadBarbersForAdmin() {
                 adminBarberSelect.appendChild(option);
             });
         }
+        const tableBody = document.querySelector('#admin-section table#barbers-table tbody');
+        if (tableBody) {
+            tableBody.innerHTML = '';
+            barbers.forEach(barber => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${barber.id}</td>
+                    <td>${barber.name}</td>
+                    <td><button onclick="deleteBarber(${barber.id})">Remover</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
     } catch (error) {
         console.error('Erro ao carregar barbeiros:', error);
         alert('Erro ao carregar barbeiros');
     }
 }
 
-// Função para marcar agendamento recorrente no admin
+// Função para marcar agendamento recorrente
 async function createRecurringAdminAppointment() {
     const clientId = document.getElementById('admin-client-select').value;
     const barberId = document.getElementById('admin-barber-select').value;
-    const baseDate = document.getElementById('admin-appointment-date').value;
+    const dayOfWeek = document.getElementById('admin-day-of-week').value;
     const time = document.getElementById('admin-appointment-time').value;
-    const daysOfWeek = prompt('Digite os dias da semana (ex.: 1,3,5 para segunda, quarta e sexta, ou "all" para todos os dias úteis)'); // Dias da semana (0=domingo, 1=segunda, etc.)
-    const occurrences = prompt('Quantidade de ocorrências (ex.: 5)');
 
-    if (!clientId || !barberId || !baseDate || !time || !daysOfWeek || !occurrences || isNaN(occurrences) || occurrences <= 0) {
-        alert('Todos os campos são obrigatórios e valores válidos.');
+    if (!clientId || !barberId || !dayOfWeek || !time) {
+        alert('Todos os campos são obrigatórios.');
         return;
     }
 
-    const recurrences = [];
-    let currentDate = new Date(baseDate);
-    const daysArray = daysOfWeek.toLowerCase() === 'all' ? [1,2,3,4,5] : daysOfWeek.split(',').map(Number).filter(d => !isNaN(d));
+    // Calcular a próxima data com base no dia da semana
+    const today = new Date();
+    const targetDay = parseInt(dayOfWeek);
+    const currentDay = today.getDay();
+    let daysToAdd = (targetDay + 7 - currentDay) % 7 || 7; // Próxima ocorrência do dia
+    let currentDate = new Date(today);
+    currentDate.setDate(today.getDate() + daysToAdd);
 
-    for (let i = 0; i < occurrences; i++) {
-        while (recurrences.length < i + 1) {
-            const dayOfWeek = currentDate.getDay();
-            if (daysArray.includes(dayOfWeek)) {
-                const dateStr = currentDate.toISOString().split('T')[0];
-                recurrences.push({ date: dateStr, time });
-            }
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-    }
-
-    if (recurrences.length === 0) {
-        alert('Nenhuma data válida encontrada para a recorrência.');
-        return;
-    }
-
-    if (confirm(`Agendar ${recurrences.length} ocorrências?`)) {
+    if (confirm(`Agendar ${clientId} com ${barberId} toda ${getDayName(targetDay)} às ${time} para o calendário inteiro?`)) {
         let successCount = 0;
-        for (const rec of recurrences) {
+        while (true) { // Loop infinito até interrupção manual ou remoção
+            const dateStr = currentDate.toISOString().split('T')[0];
             try {
                 const response = await fetch('/api/appointments', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date: rec.date, time: rec.time, barber_id: barberId, client_id: clientId })
+                    body: JSON.stringify({ date: dateStr, time, barber_id: barberId, client_id: clientId })
                 });
                 if (response.ok) successCount++;
+                else throw new Error('Falha na criação do agendamento');
             } catch (error) {
                 console.error('Erro ao agendar recorrência:', error);
+                break; // Para o loop em caso de erro
             }
+            currentDate.setDate(currentDate.getDate() + 7); // Próxima semana
         }
-        alert(`Agendamento recorrente concluído! ${successCount} ocorrências marcadas com sucesso.`);
-        document.getElementById('admin-appointment-date').value = '';
+        alert(`Agendamento recorrente iniciado! ${successCount} ocorrências marcadas até o momento.`);
+        // Limpar campos (opcional, pois é recorrente infinito)
         document.getElementById('admin-appointment-time').value = '';
     }
+}
+
+// Função auxiliar para nome do dia da semana
+function getDayName(dayIndex) {
+    const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    return days[dayIndex];
 }
 
 // Inicializar o painel do admin
@@ -1353,7 +1333,6 @@ document.addEventListener('DOMContentLoaded', function() {
         loadBarbersForAdmin();
     }
 });
-
 
 // Inicializa a aplicação
 showLogin();
