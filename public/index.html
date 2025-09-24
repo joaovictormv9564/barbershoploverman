@@ -497,34 +497,34 @@
             <button onclick="logout()">Sair</button>
         </div>
 
-       <!-- Painel do Admin -->
-<div id="admin-section" style="display: none;">
-    <h2>Painel do Administrador</h2>
-    
-    <!-- Gerenciamento de Barbeiros -->
-    <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-        <h3>Adicionar Barbeiro</h3>
-        <div class="form-group">
-            <input type="text" id="barber-name" placeholder="Nome do Barbeiro">
-        </div>
-        <button onclick="addBarber()">Adicionar</button>
-    </div>
-    
-    <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-        <h3>Barbeiros Cadastrados</h3>
-        <table id="barbers-table" style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr style="background-color: #f5f5f5;">
-                    <th style="padding: 10px; border: 1px solid #ddd;">ID</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">Nome</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">Ações</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
+        <!-- Painel do Admin -->
+        <div id="admin-section" style="display: none;">
+            <h2>Painel do Administrador</h2>
+            
+            <!-- Gerenciamento de Barbeiros -->
+            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <h3>Adicionar Barbeiro</h3>
+                <div class="form-group">
+                    <input type="text" id="barber-name" placeholder="Nome do Barbeiro">
+                </div>
+                <button onclick="addBarber()">Adicionar</button>
+            </div>
+            
+            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <h3>Barbeiros Cadastrados</h3>
+                <table id="barbers-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f5f5f5;">
+                            <th style="padding: 10px; border: 1px solid #ddd;">ID</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Nome</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
 
-    <!-- Seção de Agendamento Recorrente -->
+            <!-- Seção de Agendamento Recorrente -->
     <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
         <h3>Marcar Agendamento Recorrente</h3>
         <div class="form-group">
@@ -541,7 +541,6 @@
         </div>
         <button onclick="createRecurringAdminAppointment()">Marcar Recorrente</button>
     </div>
-</div>
 
             <!-- Marcar Agendamento -->
             <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
