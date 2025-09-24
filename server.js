@@ -413,6 +413,53 @@ app.post('/api/appointments', async (req, res) => {
     }
 });
 
+const express = require('express');
+const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+router.get('/api/users', async (req, res) => {
+    try {
+        const users = await prisma.user.findMany({
+            where: { role: 'client' }, // Filtra apenas clientes, se aplicável
+            select: { id: true, username: true, name: true }
+        });
+        res.json(users);
+    } catch (error) {
+        console.error('Erro ao buscar usuários:', error);
+        res.status(500).json({ error: 'Erro ao carregar usuários' });
+    }
+});
+
+router.get('/api/barbers', async (req, res) => {
+    try {
+        const barbers = await prisma.barber.findMany({
+            select: { id: true, name: true }
+        });
+        res.json(barbers);
+    } catch (error) {
+        console.error('Erro ao buscar barbeiros:', error);
+        res.status(500).json({ error: 'Erro ao carregar barbeiros' });
+    }
+});
+
+// Outras rotas existentes...
+router.delete('/api/barbers/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+        await prisma.barber.delete({
+            where: { id: parseInt(id) }
+        });
+        res.json({ message: 'Barbeiro removido com sucesso' });
+    } catch (error) {
+        console.error('Erro ao deletar barbeiro:', error);
+        res.status(500).json({ error: 'Erro interno ao remover barbeiro' });
+    }
+});
+
+module.exports = router;
+
 // Endpoint para deletar agendamento
 app.delete('/api/appointments/:id', async (req, res) => {
     const { id } = req.params;
@@ -473,51 +520,6 @@ app.get('/api/appointments/simple', async (req, res) => {
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
-const express = require('express');
-const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 
-router.get('/api/users', async (req, res) => {
-    try {
-        const users = await prisma.user.findMany({
-            where: { role: 'client' }, // Filtra apenas clientes, se aplicável
-            select: { id: true, username: true, name: true }
-        });
-        res.json(users);
-    } catch (error) {
-        console.error('Erro ao buscar usuários:', error);
-        res.status(500).json({ error: 'Erro ao carregar usuários' });
-    }
-});
-
-router.get('/api/barbers', async (req, res) => {
-    try {
-        const barbers = await prisma.barber.findMany({
-            select: { id: true, name: true }
-        });
-        res.json(barbers);
-    } catch (error) {
-        console.error('Erro ao buscar barbeiros:', error);
-        res.status(500).json({ error: 'Erro ao carregar barbeiros' });
-    }
-});
-
-// Outras rotas existentes...
-router.delete('/api/barbers/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
-        await prisma.barber.delete({
-            where: { id: parseInt(id) }
-        });
-        res.json({ message: 'Barbeiro removido com sucesso' });
-    } catch (error) {
-        console.error('Erro ao deletar barbeiro:', error);
-        res.status(500).json({ error: 'Erro interno ao remover barbeiro' });
-    }
-});
-
-module.exports = router;
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
