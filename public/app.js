@@ -794,6 +794,8 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeClientCalendar();
     }
 });
+
+
 // Inicializa o calendário do admin
 async function initializeAdminCalendar() {
     const calendarEl = document.getElementById('admin-calendar');
