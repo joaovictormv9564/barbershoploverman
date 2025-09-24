@@ -628,6 +628,29 @@ function setupMobileClickSupport() {
         }
     });
 }
+function enableClickToScheduleMobile() {
+    const scheduleElements = document.querySelectorAll('.schedule-time');
+    scheduleElements.forEach(element => {
+        element.addEventListener('click', function(e) {
+            if (window.innerWidth <= 768) { // Considera mobile até 768px
+                this.classList.toggle('scheduled');
+                scheduleAppointment(this.dataset.time); // Função hipotética para agendar
+                e.preventDefault();
+            }
+        }, { passive: false }); // Impede comportamento padrão de long press
+    });
+}
+
+// Função exemplo para agendar (substitua pela sua lógica real)
+function scheduleAppointment(time) {
+    console.log(`Agendado para: ${time}`);
+}
+
+// Chama a função ao carregar a página
+window.addEventListener('load', enableClickToScheduleMobile);
+
+// Reaplica ao redimensionar a janela
+window.addEventListener('resize', enableClickToScheduleMobile);
 
 // Simular seleção do calendário para mobile
 function handleMobileTimeSelection(date, time) {
