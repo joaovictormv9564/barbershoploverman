@@ -255,6 +255,60 @@ async function deleteBarber(barberId) {
     }
 }
 
+// Função para marcar agendamento recorrente no admin
+async function createRecurringAdminAppointment() {
+    const clientId = document.getElementById('admin-client-select').value;
+    const barberId = document.getElementById('admin-barber-select').value;
+    const baseDate = document.getElementById('admin-appointment-date').value;
+    const time = document.getElementById('admin-appointment-time').value;
+    
+    if (!clientId || !barberId || !baseDate || !time) {
+        alert('Todos os campos são obrigatórios');
+        return;
+    }
+    
+    const recurrenceInput = prompt(
+        `Agendar recorrente a partir de ${baseDate} às ${time}?\n\nDigite a recorrência:\n- "d" para diário\n- "w" para semanal\n- "m" para mensal\n- "0" para único\nQuantidade de ocorrências (ex.: 5):`
+    );
+    
+    if (!recurrenceInput) return;
+    
+    const [frequency, occurrences] = recurrenceInput.split(' ');
+    if (!frequency || !occurrences || isNaN(occurrences) || occurrences <= 0) {
+        alert('Formato inválido. Use "d 5", "w 5" ou "m 5" para 5 ocorrências.');
+        return;
+    }
+    
+    const recurrences = [];
+    let currentDate = new Date(baseDate);
+    for (let i = 0; i < occurrences; i++) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        recurrences.push({ date: dateStr, time });
+        if (frequency === 'd') currentDate.setDate(currentDate.getDate() + 1);
+        else if (frequency === 'w') currentDate.setDate(currentDate.getDate() + 7);
+        else if (frequency === 'm') currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    
+    if (confirm(`Agendar ${recurrences.length} ocorrências?`)) {
+        let successCount = 0;
+        for (const rec of recurrences) {
+            try {
+                const response = await fetch('/api/appointments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: rec.date, time: rec.time, barber_id: barberId, client_id: clientId })
+                });
+                if (response.ok) successCount++;
+            } catch (error) {
+                console.error('Erro ao agendar recorrência:', error);
+            }
+        }
+        alert(`Agendamento recorrente concluído! ${successCount} ocorrências marcadas com sucesso.`);
+        document.getElementById('admin-appointment-date').value = '';
+        document.getElementById('admin-appointment-time').value = '';
+    }
+}
+
 // Carrega clientes para a tabela do admin
 async function loadClients() {
     try {
