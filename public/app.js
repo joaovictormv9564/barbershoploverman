@@ -1219,40 +1219,113 @@ async function createAdminAppointment() {
     }
 }
 
+// Função para carregar clientes (corrigida para preencher o select)
+async function loadClients() {
+    try {
+        const response = await fetch('/api/users');
+        const users = await response.json();
+        const tableBody = document.querySelector('#clients-table tbody');
+        tableBody.innerHTML = '';
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.id}</td>
+                <td>${user.username}</td>
+                <td>${user.name || ''}</td>
+                <td>${user.phone || ''}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        // Preencher o select de clientes
+        const adminClientSelect = document.getElementById('admin-client-select');
+        if (adminClientSelect) {
+            adminClientSelect.innerHTML = '<option value="">Selecione um cliente</option>';
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.username} (${user.name || 'Sem nome'})`;
+                adminClientSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao carregar clientes:', error);
+        alert('Erro ao carregar clientes');
+    }
+}
+
+// Função para carregar barbeiros para o admin (corrigida para preencher o select)
+async function loadBarbersForAdmin() {
+    try {
+        // Carrega barbeiros
+        const barberResponse = await fetch('/api/barbers');
+        const barbers = await barberResponse.json();
+        const tableBody = document.querySelector('#admin-section table#barbers-table tbody');
+        tableBody.innerHTML = '';
+        barbers.forEach(barber => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${barber.id}</td>
+                <td>${barber.name}</td>
+                <td>
+                    <button onclick="editBarber(${barber.id}, '${barber.name.replace(/'/g, "\\'")}')">Editar</button>
+                    <button onclick="deleteBarber(${barber.id})">Remover</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        // Carrega barbeiros no select
+        const adminBarberSelect = document.getElementById('admin-barber-select');
+        if (adminBarberSelect) {
+            adminBarberSelect.innerHTML = '<option value="">Selecione um barbeiro</option>';
+            barbers.forEach(barber => {
+                const option = document.createElement('option');
+                option.value = barber.id;
+                option.textContent = barber.name;
+                adminBarberSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao carregar barbeiros:', error);
+        alert('Erro ao carregar barbeiros');
+    }
+}
+
 // Função para marcar agendamento recorrente no admin
 async function createRecurringAdminAppointment() {
     const clientId = document.getElementById('admin-client-select').value;
     const barberId = document.getElementById('admin-barber-select').value;
     const baseDate = document.getElementById('admin-appointment-date').value;
     const time = document.getElementById('admin-appointment-time').value;
-    
-    if (!clientId || !barberId || !baseDate || !time) {
-        alert('Todos os campos são obrigatórios');
+    const daysOfWeek = prompt('Digite os dias da semana (ex.: 1,3,5 para segunda, quarta e sexta, ou "all" para todos os dias úteis)'); // Dias da semana (0=domingo, 1=segunda, etc.)
+    const occurrences = prompt('Quantidade de ocorrências (ex.: 5)');
+
+    if (!clientId || !barberId || !baseDate || !time || !daysOfWeek || !occurrences || isNaN(occurrences) || occurrences <= 0) {
+        alert('Todos os campos são obrigatórios e valores válidos.');
         return;
     }
-    
-    const recurrenceInput = prompt(
-        `Agendar recorrente a partir de ${baseDate} às ${time}?\n\nDigite a recorrência:\n- "d" para diário\n- "w" para semanal\n- "m" para mensal\n- "0" para único\nQuantidade de ocorrências (ex.: 5):`
-    );
-    
-    if (!recurrenceInput) return;
-    
-    const [frequency, occurrences] = recurrenceInput.split(' ');
-    if (!frequency || !occurrences || isNaN(occurrences) || occurrences <= 0) {
-        alert('Formato inválido. Use "d 5", "w 5" ou "m 5" para 5 ocorrências.');
-        return;
-    }
-    
+
     const recurrences = [];
     let currentDate = new Date(baseDate);
+    const daysArray = daysOfWeek.toLowerCase() === 'all' ? [1,2,3,4,5] : daysOfWeek.split(',').map(Number).filter(d => !isNaN(d));
+
     for (let i = 0; i < occurrences; i++) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        recurrences.push({ date: dateStr, time });
-        if (frequency === 'd') currentDate.setDate(currentDate.getDate() + 1);
-        else if (frequency === 'w') currentDate.setDate(currentDate.getDate() + 7);
-        else if (frequency === 'm') currentDate.setMonth(currentDate.getMonth() + 1);
+        while (recurrences.length < i + 1) {
+            const dayOfWeek = currentDate.getDay();
+            if (daysArray.includes(dayOfWeek)) {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                recurrences.push({ date: dateStr, time });
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
     }
-    
+
+    if (recurrences.length === 0) {
+        alert('Nenhuma data válida encontrada para a recorrência.');
+        return;
+    }
+
     if (confirm(`Agendar ${recurrences.length} ocorrências?`)) {
         let successCount = 0;
         for (const rec of recurrences) {
@@ -1272,6 +1345,14 @@ async function createRecurringAdminAppointment() {
         document.getElementById('admin-appointment-time').value = '';
     }
 }
+
+// Inicializar o painel do admin
+document.addEventListener('DOMContentLoaded', function() {
+    if (user && user.role === 'admin') {
+        loadClients();
+        loadBarbersForAdmin();
+    }
+});
 
 
 // Inicializa a aplicação
