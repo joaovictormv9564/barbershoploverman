@@ -218,7 +218,7 @@ async function editBarber(id, currentName) {
     }
 }
 
-// Função de deletar barbeiro
+// Função de deletar barbeiro corrigida
 async function deleteBarber(id) {
     if (!confirm('Tem certeza que deseja remover este barbeiro?')) return;
     try {
@@ -226,10 +226,11 @@ async function deleteBarber(id) {
             method: 'DELETE'
         });
         if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Erro no servidor');
+            const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+            throw new Error(errorData.error || `Erro HTTP ${response.status}`);
         }
-        alert('Barbeiro removido com sucesso');
+        const data = await response.json();
+        alert(data.message || 'Barbeiro removido com sucesso');
         await loadBarbersForAdmin();
     } catch (error) {
         console.error('Erro ao remover barbeiro:', error);
