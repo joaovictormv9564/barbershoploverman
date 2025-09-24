@@ -524,23 +524,7 @@
                 </table>
             </div>
 
-            <!-- Seção de Agendamento Recorrente -->
-    <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-        <h3>Marcar Agendamento Recorrente</h3>
-        <div class="form-group">
-            <select id="admin-client-select">
-                <option value="">Selecione um Cliente</option>
-                <!-- Preencha dinamicamente com clientes via API -->
-            </select>
-            <select id="admin-barber-select">
-                <option value="">Selecione um Barbeiro</option>
-                <!-- Preencha dinamicamente com barbeiros -->
-            </select>
-            <input type="date" id="admin-appointment-date">
-            <input type="time" id="admin-appointment-time" step="1800">
-        </div>
-        <button onclick="createRecurringAdminAppointment()">Marcar Recorrente</button>
-    </div>
+        
 
             <!-- Marcar Agendamento -->
             <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
@@ -571,6 +555,24 @@
                 
                 <button onclick="createAdminAppointment()">Marcar Agendamento</button>
             </div>
+
+             <!-- Seção de Agendamento Recorrente -->
+    <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+        <h3>Marcar Agendamento Recorrente</h3>
+        <div class="form-group">
+            <select id="admin-client-select">
+                <option value="">Selecione um Cliente</option>
+                <!-- Preencha dinamicamente com clientes via API -->
+            </select>
+            <select id="admin-barber-select">
+                <option value="">Selecione um Barbeiro</option>
+                <!-- Preencha dinamicamente com barbeiros -->
+            </select>
+            <input type="date" id="admin-appointment-date">
+            <input type="time" id="admin-appointment-time" step="1800">
+        </div>
+        <button onclick="createRecurringAdminAppointment()">Marcar Recorrente</button>
+    </div>
 
             <!-- Calendário de Agendamentos -->
             <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
