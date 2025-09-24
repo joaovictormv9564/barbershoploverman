@@ -218,21 +218,22 @@ async function editBarber(id, currentName) {
     }
 }
 
-// Remove um barbeiro
+// Função de deletar barbeiro
 async function deleteBarber(id) {
     if (!confirm('Tem certeza que deseja remover este barbeiro?')) return;
     try {
         const response = await fetch(`/api/barbers/${id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
+            method: 'DELETE'
         });
-        const data = await response.json();
-        if (data.error) return alert(data.error);
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Erro no servidor');
+        }
         alert('Barbeiro removido com sucesso');
         await loadBarbersForAdmin();
     } catch (error) {
         console.error('Erro ao remover barbeiro:', error);
-        alert('Erro ao remover barbeiro');
+        alert(`Erro ao remover barbeiro: ${error.message}`);
     }
 }
 
@@ -375,7 +376,7 @@ async function updateTimeSelect() {
     }
 }
 
-// Inicializar calendario de cliente 
+
 // Inicializa o calendário do cliente
 async function initializeClientCalendar() {
     console.log('Inicializando calendário do cliente...');
