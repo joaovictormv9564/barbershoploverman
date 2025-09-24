@@ -397,8 +397,8 @@ async function initializeClientCalendar() {
     // Configurações base do calendário
     const calendarOptions = {
         initialView: 'timeGridWeek',
-        slotMinTime: '08:00:00',
-        slotMaxTime: '20:00:00',
+        slotMinTime: '10:00:00', // Início às 10h
+        slotMaxTime: '19:00:00', // Fim às 19h
         slotDuration: '00:30:00',
         allDaySlot: false,
         height: 'auto',
@@ -407,7 +407,7 @@ async function initializeClientCalendar() {
         // Configurações de seleção
         selectable: true,
         selectMirror: true,
-        unselectAuto: false, // Alterado para false para melhor controle
+        unselectAuto: false,
         
         // Header toolbar
         headerToolbar: {
@@ -463,7 +463,14 @@ async function initializeClientCalendar() {
             const selectedDate = selectInfo.startStr.split('T')[0];
             const selectedTime = selectInfo.startStr.split('T')[1].substring(0, 5);
             
-            // Verificar disponibilidade imediatamente
+            // Verificar se o dia e horário são válidos
+            if (!isValidDayAndTime(selectedDate, selectedTime)) {
+                alert('Este horário não está disponível (fechado ou intervalo de almoço).');
+                clientCalendar.unselect();
+                return;
+            }
+            
+            // Verificar disponibilidade
             const isAvailable = await checkAppointmentAvailability(barberId, selectedDate, selectedTime);
             if (!isAvailable) {
                 alert('Este horário já está ocupado. Por favor, escolha outro horário.');
@@ -471,7 +478,7 @@ async function initializeClientCalendar() {
                 return;
             }
             
-            // Confirmar diretamente sem preencher selects
+            // Confirmar agendamento
             const userConfirmed = confirm(`Deseja agendar para ${selectedDate} às ${selectedTime}?`);
             if (userConfirmed) {
                 await createAppointment(barberId, selectedDate, selectedTime);
@@ -506,7 +513,7 @@ async function initializeClientCalendar() {
         };
         
         calendarOptions.initialView = 'timeGridDay';
-        calendarOptions.slotMinTime = '07:00:00';
+        calendarOptions.slotMinTime = '10:00:00';
         calendarOptions.slotMaxTime = '21:00:00';
     }
 
@@ -519,7 +526,7 @@ async function initializeClientCalendar() {
     setupSelectEvents();
     setupResizeEvents();
     
-    // ADICIONAR SUPORTE MOBILE - LINHA NOVA
+    // ADICIONAR SUPORTE MOBILE
     if (window.innerWidth <= 768) {
         setTimeout(setupMobileTouchSupport, 1000);
     }
@@ -535,7 +542,7 @@ async function initializeClientCalendar() {
     loadDates();
 }
 
-// Função para preencher dados das células (importante para mobile)
+// Função para preencher dados das células
 function setupCalendarDataAttributes() {
     setTimeout(() => {
         const slots = document.querySelectorAll('.fc-timegrid-slot');
@@ -679,6 +686,13 @@ async function handleMobileTimeSelection(date, time) {
     showMobileLoading(date, time);
     
     try {
+        // Verificar se o dia e horário são válidos
+        if (!isValidDayAndTime(date, time)) {
+            alert('Este horário não está disponível (fechado ou intervalo de almoço).');
+            hideMobileLoading();
+            return;
+        }
+        
         // Verificar disponibilidade
         const isAvailable = await checkAppointmentAvailability(barberId, date, time);
         
@@ -705,7 +719,6 @@ async function handleMobileTimeSelection(date, time) {
 
 // Feedback visual para mobile
 function showMobileLoading(date, time) {
-    // Criar overlay de carregamento
     const loadingOverlay = document.createElement('div');
     loadingOverlay.id = 'mobile-loading';
     loadingOverlay.style.cssText = `
@@ -822,6 +835,10 @@ function loadDates() {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
         
+        // Verificar se é domingo ou feriado (simplificado, adicione lógica de feriados reais se necessário)
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek === 0) continue; // Pula domingo (0 = domingo)
+        
         const dateStr = date.toISOString().split('T')[0];
         const dateFormatted = date.toLocaleDateString('pt-BR', {
             weekday: 'short',
@@ -856,9 +873,27 @@ async function updateTimeSelect() {
     
     try {
         const allTimeSlots = [];
-        for (let hour = 8; hour < 20; hour++) {
-            allTimeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
-            allTimeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+        const date = new Date(selectedDate);
+        const dayOfWeek = date.getDay();
+        
+        if (dayOfWeek === 0) { // Domingo
+            timeSelect.innerHTML = '<option value="">Fechado aos domingos</option>';
+            return;
+        }
+        
+        // Definir horários com base no dia da semana
+        if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Segunda a sexta
+            for (let hour = 10; hour < 19; hour++) {
+                if (hour >= 12 && hour < 14) continue; // Intervalo de almoço
+                allTimeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+                allTimeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+            }
+        } else if (dayOfWeek === 6) { // Sábado
+            for (let hour = 10; hour < 17; hour++) {
+                if (hour >= 12 && hour < 14) continue; // Intervalo de almoço
+                allTimeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+                allTimeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+            }
         }
         
         const availableSlots = [];
@@ -913,6 +948,25 @@ async function checkAppointmentAvailability(barberId, date, time) {
     }
 }
 
+// Verificar se o dia e horário são válidos
+function isValidDayAndTime(dateStr, timeStr) {
+    const date = new Date(dateStr);
+    const dayOfWeek = date.getDay();
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    
+    if (dayOfWeek === 0) return false; // Domingo fechado
+    
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Segunda a sexta
+        if (hours < 10 || hours >= 19) return false; // Fora do horário (10h-19h)
+        if (hours >= 12 && hours < 14) return false; // Intervalo de almoço
+    } else if (dayOfWeek === 6) { // Sábado
+        if (hours < 10 || hours >= 17) return false; // Fora do horário (10h-17h)
+        if (hours >= 12 && hours < 14) return false; // Intervalo de almoço
+    }
+    
+    return true;
+}
+
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
     loadDates();
@@ -921,8 +975,6 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeClientCalendar();
     }
 });
-
-
 // Inicializa o calendário do admin
 async function initializeAdminCalendar() {
     const calendarEl = document.getElementById('admin-calendar');
