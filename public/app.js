@@ -1179,9 +1179,9 @@ async function loadBarbers() {
             throw new Error(`Erro HTTP ${response.status}`);
         }
         const barbers = await response.json();
-        const barberSelect = document.getElementById('barber-select');
+        const barberSelect = document.getElementById('admin-barber-select');
         if (!barberSelect) {
-            console.error('Elemento barber-select não encontrado');
+            console.error('Elemento admin-barber-select não encontrado');
             return;
         }
         barberSelect.innerHTML = '<option value="">Selecione um barbeiro</option>';
@@ -1208,9 +1208,9 @@ async function loadClients() {
             throw new Error(`Erro HTTP ${response.status}`);
         }
         const clients = await response.json();
-        const clientSelect = document.getElementById('client-select');
+        const clientSelect = document.getElementById('admin-client-select');
         if (!clientSelect) {
-            console.error('Elemento client-select não encontrado');
+            console.error('Elemento admin-client-select não encontrado');
             return;
         }
         clientSelect.innerHTML = '<option value="">Selecione um cliente</option>';
@@ -1247,10 +1247,10 @@ async function checkAppointmentAvailability(barberId, date, time) {
 
 // Função para marcar agendamento
 async function createAppointment() {
-    const barberSelect = document.getElementById('barber-select');
-    const clientSelect = document.getElementById('client-select');
-    const dateInput = document.getElementById('appointment-date');
-    const timeInput = document.getElementById('appointment-time');
+    const barberSelect = document.getElementById('admin-barber-select');
+    const clientSelect = document.getElementById('admin-client-select');
+    const dateInput = document.getElementById('admin-appointment-date');
+    const timeInput = document.getElementById('admin-appointment-time');
     const recurringSelect = document.getElementById('recurring-select');
 
     if (!barberSelect || !clientSelect || !dateInput || !timeInput || !recurringSelect) {
@@ -1335,7 +1335,5 @@ async function createAppointment() {
         alert(`❌ Erro ao marcar agendamento: ${error.message}`);
     }
 }
-
-
 // Inicializa a aplicação
 showLogin();
