@@ -1170,62 +1170,86 @@ async function deleteAppointment(appointmentId) {
 
 // Marca um agendamento pelo admin
 async function createAppointment() {
-    const barberId = document.getElementById('barber-select').value;
-    const clientId = document.getElementById('client-select').value;
-    const date = document.getElementById('appointment-date').value;
-    const time = document.getElementById('appointment-time').value;
-    const isRecurring = document.getElementById('recurring-select').value === 'true';
+    const barberId = document.getElementById('barber-select')?.value;
+    const clientId = document.getElementById('client-select')?.value;
+    const date = document.getElementById('appointment-date')?.value;
+    const time = document.getElementById('appointment-time')?.value;
+    const isRecurring = document.getElementById('recurring-select')?.value === 'true';
 
-    if (!barberId || !clientId || !date || !time) {
-        alert('Por favor, preencha todos os campos obrigatórios');
+    // Validação rigorosa
+    if (!barberId || isNaN(parseInt(barberId))) {
+        alert('Por favor, selecione um barbeiro válido');
         return;
     }
-
-    // Verificar disponibilidade
-    const isAvailable = await checkAppointmentAvailability(barberId, date, time);
-    if (!isAvailable) {
-        alert('Este horário já está ocupado. Por favor, escolha outro horário.');
+    if (!clientId || isNaN(parseInt(clientId))) {
+        alert('Por favor, selecione um cliente válido');
+        return;
+    }
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        alert('Por favor, selecione uma data válida (YYYY-MM-DD)');
+        return;
+    }
+    if (!time || !/^\d{2}:\d{2}$/.test(time)) {
+        alert('Por favor, selecione um horário válido (HH:MM)');
         return;
     }
 
     try {
+        // Verificar disponibilidade
+        const isAvailable = await checkAppointmentAvailability(barberId, date, time);
+        if (!isAvailable) {
+            alert('Este horário já está ocupado. Por favor, escolha outro horário.');
+            return;
+        }
+
         const response = await fetch('/api/appointments', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify({
                 barber_id: parseInt(barberId),
                 client_id: parseInt(clientId),
                 date,
                 time,
                 is_recurring: isRecurring
-            })
+            }),
+            timeout: 10000 // Timeout de 10s para a requisição
         });
 
         const result = await response.json();
 
-        if (!response.ok || result.error) {
-            throw new Error(result.error || 'Erro ao criar agendamento');
+        if (!response.ok) {
+            throw new Error(result.error || `Erro HTTP ${response.status}`);
+        }
+        if (result.error) {
+            throw new Error(result.error);
         }
 
-        alert(`✅ Agendamento criado com sucesso! ${isRecurring ? `(${result.recurringCount} agendamentos recorrentes criados)` : ''}`);
+        alert(`✅ Agendamento criado com sucesso! ${isRecurring ? `(${result.recurringCount || 0} agendamentos recorrentes criados)` : ''}`);
+
         // Limpar campos
         document.getElementById('appointment-date').value = '';
         document.getElementById('appointment-time').value = '';
         document.getElementById('recurring-select').value = 'false';
 
-        // Recarregar calendários
-        if (adminCalendar) {
-            adminCalendar.refetchEvents();
-        }
-        if (clientCalendar) {
-            clientCalendar.refetchEvents();
+        // Recarregar calendários, se existirem
+        try {
+            if (window.adminCalendar && typeof window.adminCalendar.refetchEvents === 'function') {
+                window.adminCalendar.refetchEvents();
+            }
+            if (window.clientCalendar && typeof window.clientCalendar.refetchEvents === 'function') {
+                window.clientCalendar.refetchEvents();
+            }
+        } catch (calendarError) {
+            console.error('Erro ao recarregar calendários:', calendarError);
         }
     } catch (error) {
         console.error('Erro ao marcar agendamento:', error);
-        alert('Erro ao marcar agendamento');
+        alert(`❌ Erro ao marcar agendamento: ${error.message}`);
     }
 }
-
 
 
 // Inicializa a aplicação

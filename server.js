@@ -26,9 +26,11 @@ const pool = new Pool({
     password: process.env.PGPASSWORD,
     port: process.env.PGPORT || 5432,
     ssl: process.env.PGHOST ? { rejectUnauthorized: false } : false,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000
+    max: 10, // Reduzido para evitar esgotamento
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5000,
+    maxUses: 7500,
+    allowExitOnIdle: true
 });
 
 // Testar conexão ao iniciar

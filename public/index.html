@@ -526,42 +526,42 @@
 
         
 
-            <!-- Marcar Agendamento -->
-            <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
-                <h3>Marcar Agendamento</h3>
-                <div class="form-group">
-                    <label for="admin-client-select">Cliente:</label>
-                    <select id="admin-client-select">
-                        <option value="">Selecione um cliente</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="admin-barber-select">Barbeiro:</label>
-                    <select id="admin-barber-select">
-                        <option value="">Selecione um barbeiro</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="admin-appointment-date">Data:</label>
-                    <input type="date" id="admin-appointment-date">
-                </div>
-                
-                <div class="form-group">
-                    <label for="admin-appointment-time">Horário:</label>
-                    <input type="time" id="admin-appointment-time" step="1800">
-                </div>
-                <div>
-    <label>Horário recorrente?</label>
-    <select id="recurring-select" style="width: 100%;">
-        <option value="false">Não</option>
-        <option value="true">Sim</option>
-    </select>
+           <!-- Marcar Agendamento -->
+<div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+    <h3>📅 Marcar Agendamento</h3>
+    <div class="appointment-form-grid">
+        <div class="form-group">
+            <label for="client-select">Cliente:</label>
+            <select id="client-select">
+                <option value="">Selecione um cliente</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="barber-select">Barbeiro:</label>
+            <select id="barber-select">
+                <option value="">Selecione um barbeiro</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="appointment-date">Data:</label>
+            <input type="date" id="appointment-date">
+        </div>
+        <div class="form-group">
+            <label for="appointment-time">Horário:</label>
+            <input type="time" id="appointment-time" step="1800">
+        </div>
+        <div class="form-group">
+            <label for="recurring-select">Horário recorrente?</label>
+            <select id="recurring-select">
+                <option value="false">Não</option>
+                <option value="true">Sim</option>
+            </select>
+        </div>
+    </div>
+    <button onclick="createAppointment()" style="margin-top: 15px; padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px;">
+        🎯 Marcar Agendamento
+    </button>
 </div>
-                <button onclick="createAdminAppointment()">Marcar Agendamento</button>
-            </div>
-
 
             <!-- Calendário de Agendamentos -->
             <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
