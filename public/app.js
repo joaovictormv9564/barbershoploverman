@@ -1219,120 +1219,181 @@ async function createAdminAppointment() {
     }
 }
 
-// Função para carregar clientes
-async function loadClients() {
+// Funções para horários recorrentes
+async function loadRecurringAppointments() {
     try {
-        const response = await fetch('/api/users');
-        if (!response.ok) throw new Error('Erro ao carregar clientes');
-        const users = await response.json();
-        const adminClientSelect = document.getElementById('admin-client-select');
-        if (adminClientSelect) {
-            adminClientSelect.innerHTML = '<option value="">Selecione um cliente</option>';
-            users.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = `${user.username} (${user.name || 'Sem nome'})`;
-                adminClientSelect.appendChild(option);
-            });
+        const response = await fetch('/api/recurring-appointments');
+        const appointments = await response.json();
+        
+        const listElement = document.getElementById('recurring-appointments-list');
+        listElement.innerHTML = '';
+        
+        if (appointments.length === 0) {
+            listElement.innerHTML = '<p style="color: #888; text-align: center;">Nenhum horário recorrente cadastrado</p>';
+            return;
         }
+        
+        appointments.forEach(appointment => {
+            const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+            const appointmentElement = document.createElement('div');
+            appointmentElement.style.cssText = `
+                background: #333;
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 5px;
+                border-left: 4px solid #27ae60;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            `;
+            
+            appointmentElement.innerHTML = `
+                <div>
+                    <strong>${dayNames[appointment.day_of_week]} - ${appointment.time}</strong><br>
+                    <small>Barbeiro: ${appointment.barber_name}</small><br>
+                    <small>Cliente: ${appointment.client_name}</small><br>
+                    <small>Início: ${appointment.start_date}</small>
+                    ${appointment.end_date ? `<br><small>Fim: ${appointment.end_date}</small>` : ''}
+                </div>
+                <div>
+                    <button onclick="deactivateRecurringAppointment(${appointment.id})" 
+                            style="background: #e74c3c; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer;">
+                        🗑️ Remover
+                    </button>
+                </div>
+            `;
+            
+            listElement.appendChild(appointmentElement);
+        });
     } catch (error) {
-        console.error('Erro ao carregar clientes:', error);
-        alert('Erro ao carregar clientes');
+        console.error('Erro ao carregar horários recorrentes:', error);
     }
 }
 
-// Função para carregar barbeiros
-async function loadBarbersForAdmin() {
-    try {
-        const response = await fetch('/api/barbers');
-        if (!response.ok) throw new Error('Erro ao carregar barbeiros');
-        const barbers = await response.json();
-        const adminBarberSelect = document.getElementById('admin-barber-select');
-        if (adminBarberSelect) {
-            adminBarberSelect.innerHTML = '<option value="">Selecione um barbeiro</option>';
-            barbers.forEach(barber => {
-                const option = document.createElement('option');
-                option.value = barber.id;
-                option.textContent = barber.name;
-                adminBarberSelect.appendChild(option);
-            });
-        }
-        const tableBody = document.querySelector('#admin-section table#barbers-table tbody');
-        if (tableBody) {
-            tableBody.innerHTML = '';
-            barbers.forEach(barber => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${barber.id}</td>
-                    <td>${barber.name}</td>
-                    <td><button onclick="deleteBarber(${barber.id})">Remover</button></td>
-                `;
-                tableBody.appendChild(row);
-            });
-        }
-    } catch (error) {
-        console.error('Erro ao carregar barbeiros:', error);
-        alert('Erro ao carregar barbeiros');
-    }
-}
-
-// Função para marcar agendamento recorrente
-async function createRecurringAdminAppointment() {
-    const clientId = document.getElementById('admin-client-select').value;
-    const barberId = document.getElementById('admin-barber-select').value;
-    const dayOfWeek = document.getElementById('admin-day-of-week').value;
-    const time = document.getElementById('admin-appointment-time').value;
-
-    if (!clientId || !barberId || !dayOfWeek || !time) {
-        alert('Todos os campos são obrigatórios.');
+async function createRecurringAppointment() {
+    const barberId = document.getElementById('recurring-barber-select').value;
+    const clientId = document.getElementById('recurring-client-select').value;
+    const dayOfWeek = document.getElementById('recurring-day-select').value;
+    const time = document.getElementById('recurring-time').value;
+    const startDate = document.getElementById('recurring-start-date').value;
+    const endDate = document.getElementById('recurring-end-date').value;
+    
+    if (!barberId || !clientId || !dayOfWeek || !time || !startDate) {
+        alert('Por favor, preencha todos os campos obrigatórios');
         return;
     }
-
-    // Calcular a próxima data com base no dia da semana
-    const today = new Date();
-    const targetDay = parseInt(dayOfWeek);
-    const currentDay = today.getDay();
-    let daysToAdd = (targetDay + 7 - currentDay) % 7 || 7; // Próxima ocorrência do dia
-    let currentDate = new Date(today);
-    currentDate.setDate(today.getDate() + daysToAdd);
-
-    if (confirm(`Agendar ${clientId} com ${barberId} toda ${getDayName(targetDay)} às ${time} para o calendário inteiro?`)) {
-        let successCount = 0;
-        while (true) { // Loop infinito até interrupção manual ou remoção
-            const dateStr = currentDate.toISOString().split('T')[0];
-            try {
-                const response = await fetch('/api/appointments', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date: dateStr, time, barber_id: barberId, client_id: clientId })
-                });
-                if (response.ok) successCount++;
-                else throw new Error('Falha na criação do agendamento');
-            } catch (error) {
-                console.error('Erro ao agendar recorrência:', error);
-                break; // Para o loop em caso de erro
-            }
-            currentDate.setDate(currentDate.getDate() + 7); // Próxima semana
+    
+    try {
+        const response = await fetch('/api/recurring-appointments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                barber_id: barberId,
+                client_id: clientId,
+                day_of_week: parseInt(dayOfWeek),
+                time: time,
+                start_date: startDate,
+                end_date: endDate || null
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Erro ao criar horário recorrente');
         }
-        alert(`Agendamento recorrente iniciado! ${successCount} ocorrências marcadas até o momento.`);
-        // Limpar campos (opcional, pois é recorrente infinito)
-        document.getElementById('admin-appointment-time').value = '';
+        
+        alert('✅ Horário recorrente criado com sucesso!');
+        
+        // Limpar formulário
+        document.getElementById('recurring-time').value = '';
+        document.getElementById('recurring-end-date').value = '';
+        
+        // Recarregar lista
+        loadRecurringAppointments();
+        
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao criar horário recorrente');
     }
 }
 
-// Função auxiliar para nome do dia da semana
-function getDayName(dayIndex) {
-    const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    return days[dayIndex];
+async function deactivateRecurringAppointment(id) {
+    if (!confirm('Tem certeza que deseja remover este horário recorrente?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/recurring-appointments/${id}/deactivate`, {
+            method: 'PUT'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Erro ao remover horário recorrente');
+        }
+        
+        alert('✅ Horário recorrente removido com sucesso!');
+        loadRecurringAppointments();
+        
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao remover horário recorrente');
+    }
 }
 
-// Inicializar o painel do admin
-document.addEventListener('DOMContentLoaded', function() {
-    if (user && user.role === 'admin') {
-        loadClients();
-        loadBarbersForAdmin();
+// Função para gerar agendamentos a partir dos recorrentes
+async function generateRecurringAppointments() {
+    try {
+        const response = await fetch('/api/generate-recurring-appointments', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            console.log('Agendamentos recorrentes gerados com sucesso');
+        }
+    } catch (error) {
+        console.error('Erro ao gerar agendamentos:', error);
     }
-});
+}
 
+// Carregar dados quando o painel admin for aberto
+async function showAdminPanel() {
+    // ... código existente ...
+    
+    // Carregar horários recorrentes
+    await loadRecurringAppointments();
+    
+    // Preencher selects
+    await loadRecurringSelects();
+}
+
+async function loadRecurringSelects() {
+    // Carregar barbeiros
+    const barberResponse = await fetch('/api/barbers');
+    const barbers = await barberResponse.json();
+    
+    const barberSelect = document.getElementById('recurring-barber-select');
+    barberSelect.innerHTML = '<option value="">Selecione o barbeiro</option>';
+    barbers.forEach(barber => {
+        const option = document.createElement('option');
+        option.value = barber.id;
+        option.textContent = barber.name;
+        barberSelect.appendChild(option);
+    });
+    
+    // Carregar clientes
+    const clientResponse = await fetch('/api/users');
+    const clients = await clientResponse.json();
+    
+    const clientSelect = document.getElementById('recurring-client-select');
+    clientSelect.innerHTML = '<option value="">Selecione o cliente</option>';
+    clients.forEach(client => {
+        const option = document.createElement('option');
+        option.value = client.id;
+        option.textContent = `${client.name} (${client.phone})`;
+        clientSelect.appendChild(option);
+    });
+    
+    // Definir data início como hoje
+    document.getElementById('recurring-start-date').value = new Date().toISOString().split('T')[0];
+}
 // Inicializa a aplicação
 showLogin();

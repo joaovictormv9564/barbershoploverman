@@ -109,6 +109,33 @@ app.use(express.static('public'));
     }
 })();
 
+// tabela de horarios recorrentes
+app.get('/api/create-recurring-table', async (req, res) => {
+    try {
+        const client = await pool.connect();
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS recurring_appointments (
+                id SERIAL PRIMARY KEY,
+                barber_id INTEGER NOT NULL,
+                client_id INTEGER NOT NULL,
+                day_of_week INTEGER NOT NULL, -- 0=Domingo, 1=Segunda, ..., 6=Sábado
+                time TIME NOT NULL,
+                start_date DATE NOT NULL,
+                end_date DATE,
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT NOW(),
+                FOREIGN KEY (barber_id) REFERENCES barbers(id),
+                FOREIGN KEY (client_id) REFERENCES users(id)
+            )
+        `);
+        client.release();
+        res.json({ message: 'Tabela de horários recorrentes criada' });
+    } catch (err) {
+        console.error('Erro ao criar tabela:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Endpoint de login
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
@@ -413,6 +440,100 @@ app.post('/api/appointments', async (req, res) => {
     }
 });
 
+// Endpoint para criar horário recorrente
+app.post('/api/recurring-appointments', async (req, res) => {
+    const { barber_id, client_id, day_of_week, time, start_date, end_date } = req.body;
+    
+    try {
+        const client = await pool.connect();
+        const result = await client.query(
+            `INSERT INTO recurring_appointments 
+             (barber_id, client_id, day_of_week, time, start_date, end_date) 
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [barber_id, client_id, day_of_week, time, start_date, end_date]
+        );
+        client.release();
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para listar horários recorrentes
+app.get('/api/recurring-appointments', async (req, res) => {
+    try {
+        const client = await pool.connect();
+        const result = await client.query(`
+            SELECT ra.*, b.name as barber_name, u.name as client_name, u.phone as client_phone
+            FROM recurring_appointments ra
+            JOIN barbers b ON ra.barber_id = b.id
+            JOIN users u ON ra.client_id = u.id
+            WHERE ra.is_active = true
+            ORDER BY ra.day_of_week, ra.time
+        `);
+        client.release();
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para desativar horário recorrente
+app.put('/api/recurring-appointments/:id/deactivate', async (req, res) => {
+    try {
+        const client = await pool.connect();
+        await client.query(
+            'UPDATE recurring_appointments SET is_active = false WHERE id = $1',
+            [req.params.id]
+        );
+        client.release();
+        res.json({ message: 'Horário recorrente desativado' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// endpoint para gerar agendamentos automaticamente
+app.post('/api/generate-recurring-appointments', async (req, res) => {
+    try {
+        const client = await pool.connect();
+        
+        // Buscar horários recorrentes ativos
+        const recurring = await client.query(`
+            SELECT * FROM recurring_appointments 
+            WHERE is_active = true 
+            AND start_date <= CURRENT_DATE
+            AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+        `);
+        
+        for (const appointment of recurring.rows) {
+            // Verificar se hoje é o dia da semana correto
+            const today = new Date();
+            if (today.getDay() === appointment.day_of_week) {
+                const dateStr = today.toISOString().split('T')[0];
+                
+                // Verificar se o agendamento já existe
+                const existing = await client.query(
+                    'SELECT * FROM appointments WHERE barber_id = $1 AND date = $2 AND time = $3',
+                    [appointment.barber_id, dateStr, appointment.time]
+                );
+                
+                if (existing.rows.length === 0) {
+                    // Criar agendamento
+                    await client.query(
+                        'INSERT INTO appointments (date, time, barber_id, client_id) VALUES ($1, $2, $3, $4)',
+                        [dateStr, appointment.time, appointment.barber_id, appointment.client_id]
+                    );
+                }
+            }
+        }
+        
+        client.release();
+        res.json({ message: 'Agendamentos recorrentes verificados' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Endpoint para deletar agendamento
 app.delete('/api/appointments/:id', async (req, res) => {
