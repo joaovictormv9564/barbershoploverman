@@ -1168,13 +1168,101 @@ async function deleteAppointment(appointmentId) {
     }
 }
 
-// Marca um agendamento pelo admin
+// Função para carregar barbeiros
+async function loadBarbers() {
+    try {
+        const response = await fetch('/api/barbers', {
+            headers: { 'Accept': 'application/json' },
+            timeout: 5000
+        });
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}`);
+        }
+        const barbers = await response.json();
+        const barberSelect = document.getElementById('barber-select');
+        if (!barberSelect) {
+            console.error('Elemento barber-select não encontrado');
+            return;
+        }
+        barberSelect.innerHTML = '<option value="">Selecione um barbeiro</option>';
+        barbers.forEach(barber => {
+            const option = document.createElement('option');
+            option.value = barber.id;
+            option.textContent = barber.name;
+            barberSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar barbeiros:', error);
+        alert('Erro ao carregar barbeiros: ' + error.message);
+    }
+}
+
+// Função para carregar clientes
+async function loadClients() {
+    try {
+        const response = await fetch('/api/users', {
+            headers: { 'Accept': 'application/json' },
+            timeout: 5000
+        });
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}`);
+        }
+        const clients = await response.json();
+        const clientSelect = document.getElementById('client-select');
+        if (!clientSelect) {
+            console.error('Elemento client-select não encontrado');
+            return;
+        }
+        clientSelect.innerHTML = '<option value="">Selecione um cliente</option>';
+        clients.forEach(client => {
+            const option = document.createElement('option');
+            option.value = client.id;
+            option.textContent = `${client.name} (${client.phone || 'Sem telefone'})`;
+            clientSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar clientes:', error);
+        alert('Erro ao carregar clientes: ' + error.message);
+    }
+}
+
+// Função para verificar disponibilidade
+async function checkAppointmentAvailability(barberId, date, time) {
+    try {
+        const response = await fetch(`/api/appointments/check?barber_id=${barberId}&date=${date}&time=${time}`, {
+            headers: { 'Accept': 'application/json' },
+            timeout: 5000
+        });
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}`);
+        }
+        const result = await response.json();
+        return !result.isBooked;
+    } catch (error) {
+        console.error('Erro ao verificar disponibilidade:', error);
+        alert(`❌ Erro ao verificar disponibilidade: ${error.message}`);
+        return false;
+    }
+}
+
+// Função para marcar agendamento
 async function createAppointment() {
-    const barberId = document.getElementById('barber-select')?.value;
-    const clientId = document.getElementById('client-select')?.value;
-    const date = document.getElementById('appointment-date')?.value;
-    const time = document.getElementById('appointment-time')?.value;
-    const isRecurring = document.getElementById('recurring-select')?.value === 'true';
+    const barberSelect = document.getElementById('barber-select');
+    const clientSelect = document.getElementById('client-select');
+    const dateInput = document.getElementById('appointment-date');
+    const timeInput = document.getElementById('appointment-time');
+    const recurringSelect = document.getElementById('recurring-select');
+
+    if (!barberSelect || !clientSelect || !dateInput || !timeInput || !recurringSelect) {
+        alert('Erro: Um ou mais elementos do formulário não foram encontrados');
+        return;
+    }
+
+    const barberId = barberSelect.value;
+    const clientId = clientSelect.value;
+    const date = dateInput.value;
+    const time = timeInput.value;
+    const isRecurring = recurringSelect.value === 'true';
 
     // Validação rigorosa
     if (!barberId || isNaN(parseInt(barberId))) {
@@ -1215,7 +1303,7 @@ async function createAppointment() {
                 time,
                 is_recurring: isRecurring
             }),
-            timeout: 10000 // Timeout de 10s para a requisição
+            timeout: 10000
         });
 
         const result = await response.json();
@@ -1230,20 +1318,17 @@ async function createAppointment() {
         alert(`✅ Agendamento criado com sucesso! ${isRecurring ? `(${result.recurringCount || 0} agendamentos recorrentes criados)` : ''}`);
 
         // Limpar campos
-        document.getElementById('appointment-date').value = '';
-        document.getElementById('appointment-time').value = '';
-        document.getElementById('recurring-select').value = 'false';
+        dateInput.value = '';
+        timeInput.value = '';
+        recurringSelect.value = 'false';
 
-        // Recarregar calendários, se existirem
+        // Recarregar calendário
         try {
             if (window.adminCalendar && typeof window.adminCalendar.refetchEvents === 'function') {
                 window.adminCalendar.refetchEvents();
             }
-            if (window.clientCalendar && typeof window.clientCalendar.refetchEvents === 'function') {
-                window.clientCalendar.refetchEvents();
-            }
         } catch (calendarError) {
-            console.error('Erro ao recarregar calendários:', calendarError);
+            console.error('Erro ao recarregar calendário:', calendarError);
         }
     } catch (error) {
         console.error('Erro ao marcar agendamento:', error);
