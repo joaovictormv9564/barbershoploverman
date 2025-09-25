@@ -552,7 +552,13 @@
                     <label for="admin-appointment-time">Horário:</label>
                     <input type="time" id="admin-appointment-time" step="1800">
                 </div>
-                
+                <div>
+    <label>Horário recorrente?</label>
+    <select id="recurring-select" style="width: 100%;">
+        <option value="false">Não</option>
+        <option value="true">Sim</option>
+    </select>
+</div>
                 <button onclick="createAdminAppointment()">Marcar Agendamento</button>
             </div>
 

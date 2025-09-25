@@ -1169,14 +1169,15 @@ async function deleteAppointment(appointmentId) {
 }
 
 // Marca um agendamento pelo admin
-async function createAdminAppointment() {
-    const clientId = document.getElementById('admin-client-select').value;
-    const barberId = document.getElementById('admin-barber-select').value;
-    const date = document.getElementById('admin-appointment-date').value;
-    const time = document.getElementById('admin-appointment-time').value;
-    
-    if (!clientId || !barberId || !date || !time) {
-        alert('Todos os campos são obrigatórios');
+async function createAppointment() {
+    const barberId = document.getElementById('barber-select').value;
+    const clientId = document.getElementById('client-select').value;
+    const date = document.getElementById('appointment-date').value;
+    const time = document.getElementById('appointment-time').value;
+    const isRecurring = document.getElementById('recurring-select').value === 'true';
+
+    if (!barberId || !clientId || !date || !time) {
+        alert('Por favor, preencha todos os campos obrigatórios');
         return;
     }
 
@@ -1186,26 +1187,32 @@ async function createAdminAppointment() {
         alert('Este horário já está ocupado. Por favor, escolha outro horário.');
         return;
     }
-    
+
     try {
         const response = await fetch('/api/appointments', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date, time, barber_id: barberId, client_id: clientId })
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+                barber_id: parseInt(barberId),
+                client_id: parseInt(clientId),
+                date,
+                time,
+                is_recurring: isRecurring
+            })
         });
-        
-        const data = await response.json();
-        if (data.error) {
-            alert(data.error);
-            return;
+
+        const result = await response.json();
+
+        if (!response.ok || result.error) {
+            throw new Error(result.error || 'Erro ao criar agendamento');
         }
-        
-        alert('Agendamento marcado com sucesso');
-        
+
+        alert(`✅ Agendamento criado com sucesso! ${isRecurring ? `(${result.recurringCount} agendamentos recorrentes criados)` : ''}`);
         // Limpar campos
-        document.getElementById('admin-appointment-date').value = '';
-        document.getElementById('admin-appointment-time').value = '';
-        
+        document.getElementById('appointment-date').value = '';
+        document.getElementById('appointment-time').value = '';
+        document.getElementById('recurring-select').value = 'false';
+
         // Recarregar calendários
         if (adminCalendar) {
             adminCalendar.refetchEvents();
@@ -1218,6 +1225,7 @@ async function createAdminAppointment() {
         alert('Erro ao marcar agendamento');
     }
 }
+
 
 
 // Inicializa a aplicação

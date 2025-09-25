@@ -379,36 +379,97 @@ app.post('/api/appointments', async (req, res) => {
     
     try {
         const client = await pool.connect();
-        
-        // Verificar se o horário já está ocupado
-        const checkResult = await client.query(
-            'SELECT * FROM appointments WHERE barber_id = $1 AND date = $2 AND time = $3',
-            [barber_id, date, time]
-        );
-        
-        if (checkResult.rows.length > 0) {
+        try {
+            await client.query('BEGIN', { timeout: 3000 });
+
+            // Verificar se o horário já está ocupado
+            const checkResult = await client.query(
+                'SELECT * FROM appointments WHERE barber_id = $1 AND date = $2 AND time = $3',
+                [barber_id, date, time],
+                { timeout: 3000 }
+            );
+
+            if (checkResult.rows.length > 0) {
+                await client.query('ROLLBACK');
+                client.release();
+                console.log('Horário já ocupado:', { barber_id, date, time });
+                return res.status(400).json({ 
+                    error: 'Horário já ocupado',
+                    existingAppointment: checkResult.rows[0]
+                });
+            }
+
+            // Inserir o agendamento inicial
+            const result = await client.query(
+                'INSERT INTO appointments (date, time, barber_id, client_id) VALUES ($1, $2, $3, $4) RETURNING id',
+                [date, time, barber_id, client_id],
+                { timeout: 3000 }
+            );
+
+            const appointmentId = result.rows[0].id;
+            console.log('Agendamento inicial criado com ID:', appointmentId);
+
+            // Se for recorrente, criar agendamentos para o mesmo dia da semana até 31/12/2025
+            let recurringCount = 0;
+            if (req.body.is_recurring) {
+                const startDate = new Date(date);
+                const endDate = new Date('2025-12-31');
+                const values = [];
+                const params = [];
+                let index = 0;
+
+                // Gerar datas para o mesmo dia da semana
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 7)) {
+                    if (d > startDate) { // Pular a data inicial já inserida
+                        const dateStr = d.toISOString().split('T')[0];
+                        params.push(barber_id, dateStr, time, client_id);
+                        values.push(`($${index * 4 + 1}, $${index * 4 + 2}, $${index * 4 + 3}, $${index * 4 + 4})`);
+                        index++;
+                    }
+                }
+
+                if (values.length > 0) {
+                    // Verificar conflitos para todas as datas
+                    const existing = await client.query(`
+                        SELECT barber_id, date, time 
+                        FROM appointments 
+                        WHERE (barber_id, date, time) IN (
+                            ${values.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3})`).join(',')}
+                        )
+                    `, params, { timeout: 3000 });
+
+                    const existingSet = new Set(existing.rows.map(row => `${row.barber_id}-${row.date}-${row.time}`));
+                    const insertValues = values.filter((_, i) => {
+                        const key = `${params[i * 4]}-${params[i * 4 + 1]}-${params[i * 4 + 2]}`;
+                        return !existingSet.has(key);
+                    });
+
+                    if (insertValues.length > 0) {
+                        await client.query(`
+                            INSERT INTO appointments (barber_id, date, time, client_id)
+                            VALUES ${insertValues.join(',')}
+                        `, params, { timeout: 3000 });
+                        recurringCount = insertValues.length;
+                        console.log(`Inseridos ${recurringCount} agendamentos recorrentes`);
+                    }
+                }
+            }
+
+            await client.query('COMMIT', { timeout: 3000 });
             client.release();
-            console.log('Horário já ocupado:', { barber_id, date, time });
-            return res.status(400).json({ 
-                error: 'Horário já ocupado',
-                existingAppointment: checkResult.rows[0]
+            res.json({ 
+                message: 'Agendamento criado com sucesso',
+                appointmentId: appointmentId,
+                recurringCount: recurringCount
             });
+        } catch (err) {
+            await client.query('ROLLBACK');
+            client.release();
+            console.error('Erro ao criar agendamento:', err);
+            res.status(500).json({ error: 'Erro no servidor', details: err.message });
         }
-        
-        // Criar o agendamento
-        const result = await client.query(
-            'INSERT INTO appointments (date, time, barber_id, client_id) VALUES ($1, $2, $3, $4) RETURNING id',
-            [date, time, barber_id, client_id]
-        );
-        
-        client.release();
-        console.log('Agendamento criado com ID:', result.rows[0].id);
-        res.json({ 
-            message: 'Agendamento criado com sucesso',
-            appointmentId: result.rows[0].id
-        });
     } catch (err) {
-        console.error('Erro ao criar agendamento:', err);
+        console.error('Erro ao conectar ao banco:', err);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });

@@ -712,3 +712,27 @@ select:focus-visible {
         --hint-opacity: 0.5;
     }
 }
+.appointment-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin: 15px 0;
+}
+
+@media (max-width: 768px) {
+    .appointment-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.appointment-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin: 15px 0;
+}
+
+@media (max-width: 768px) {
+    .appointment-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
