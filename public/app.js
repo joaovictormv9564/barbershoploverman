@@ -53,8 +53,8 @@ async function login(event) {
         event.preventDefault();
     }
 
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
+    const usernameInput = document.getElementById('login-username');
+    const passwordInput = document.getElementById('login-password');
 
     // Validar se os inputs existem
     if (!usernameInput || !passwordInput) {
@@ -102,6 +102,56 @@ async function login(event) {
         alert(err.message || 'Erro ao fazer login. Tente novamente.');
     }
 }
+
+
+    const usernameInput = document.getElementById('login-username');
+    const passwordInput = document.getElementById('login-password');
+
+    // Validar se os inputs existem
+    if (!usernameInput || !passwordInput) {
+        console.error('Erro: Inputs de usuário ou senha não encontrados');
+        alert('Erro: Campos de usuário ou senha não encontrados');
+        return;
+    }
+
+    const username = usernameInput.value;
+    const password = passwordInput.value;
+
+    // Validar entrada
+    if (!username || !password) {
+        console.error('Erro: Usuário e senha são obrigatórios');
+        alert('Por favor, preencha usuário e senha');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        // Verificar se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Resposta do servidor não é JSON: ${text}`);
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro no login');
+        }
+
+        // Login bem-sucedido
+        console.log('Login bem-sucedido:', data);
+        // Redirecionar para a página de agendamento (ajuste conforme necessário)
+        window.location.href = '/dashboard.html';
+    } catch (err) {
+        console.error('Erro no login:', err.message);
+        alert(err.message || 'Erro ao fazer login. Tente novamente.');
+    }
 
 // Função de registro
 async function register() {
