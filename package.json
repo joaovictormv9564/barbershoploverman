@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "express": "^4.17.1",
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^17.2.2",
+    "express": "^4.21.2",
     "pg": "^8.16.3"
   },
   "author": "Seu Nome",

@@ -1282,6 +1282,8 @@ async function createAppointment() {
         return;
     }
 
+    console.log('Dados enviados para o backend:', { barber_id: parseInt(barberId), client_id: parseInt(clientId), date, time, is_recurring: isRecurring });
+
     try {
         // Verificar disponibilidade
         const isAvailable = await checkAppointmentAvailability(barberId, date, time);
@@ -1307,6 +1309,7 @@ async function createAppointment() {
         });
 
         const result = await response.json();
+        console.log('Resposta do backend:', result);
 
         if (!response.ok) {
             throw new Error(`${result.error || `Erro HTTP ${response.status}`}${result.details ? `: ${result.details}` : ''}${result.conflicts ? ` (Conflitos: ${JSON.stringify(result.conflicts)})` : ''}`);

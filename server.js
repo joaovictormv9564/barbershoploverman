@@ -1,115 +1,134 @@
+require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
 const app = express();
 
-// Validar variáveis de ambiente
-const requiredEnvVars = ['PGHOST', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGPORT'];
-requiredEnvVars.forEach((varName) => {
-    if (!process.env[varName]) {
-        console.error(`Erro crítico: Variável de ambiente ${varName} não definida`);
-    }
-});
 
-console.log('Variáveis de ambiente:', {
-    PGHOST: process.env.PGHOST,
-    PGDATABASE: process.env.PGDATABASE,
-    PGUSER: process.env.PGUSER,
-    PGPORT: process.env.PGPORT
-});
 
-// Configuração do PostgreSQL
-const pool = new Pool({
+// Configuração do pool do PostgreSQL 
+const pg = require('pg'); // Importar o módulo pg
+const pool = new pg.Pool({
     host: process.env.PGHOST,
     database: process.env.PGDATABASE,
     user: process.env.PGUSER,
     password: process.env.PGPASSWORD,
     port: process.env.PGPORT || 5432,
     ssl: process.env.PGHOST ? { rejectUnauthorized: false } : false,
-    max: 10, // Reduzido para evitar esgotamento
+    max: 10,
     idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 5000,
     maxUses: 7500,
     allowExitOnIdle: true
 });
 
-// Testar conexão ao iniciar
-(async () => {
-    try {
-        const client = await pool.connect();
-        console.log('Conexão ao banco Neon PostgreSQL bem-sucedida');
-        const res = await client.query('SELECT NOW()');
-        console.log('Resposta do banco:', res.rows[0]);
-        client.release();
-    } catch (err) {
-        console.error('Erro ao conectar ao banco Neon:', err);
+// Verificar variáveis de ambiente
+const requiredEnvVars = ['PGHOST', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGPORT'];
+for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+        console.error(`Erro crítico: Variável de ambiente ${envVar} não definida`);
+        process.exit(1);
     }
-})();
+}
 
+// Testar conexão com o banco
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('Erro ao conectar ao banco Neon:', err);
+        process.exit(1);
+    }
+    console.log('Conexão com o banco Neon estabelecida com sucesso');
+    release();
+});
 app.use(express.json());
 app.use(express.static('public'));
 
-// Criação das tabelas
-(async () => {
+
+
+// cria tabelas
+async function setupTables() {
     const client = await pool.connect();
     try {
+        console.log('Iniciando configuração das tabelas...');
         await client.query('BEGIN');
-        console.log('Criando tabelas...');
+
+        // Dropar tabelas existentes
+        console.log('Dropando tabelas existentes...');
+        await client.query('DROP TABLE IF EXISTS appointments CASCADE;');
+        await client.query('DROP TABLE IF EXISTS barbers CASCADE;');
+        await client.query('DROP TABLE IF EXISTS users CASCADE;');
+
+        // Criar tabela users
+        console.log('Criando tabela users...');
         await client.query(`
-            CREATE TABLE IF NOT EXISTS users (
+            CREATE TABLE users (
                 id SERIAL PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
+                username TEXT NOT NULL,
                 password TEXT NOT NULL,
                 role TEXT NOT NULL,
                 name TEXT,
-                phone TEXT
-            )
+                phone TEXT,
+                CONSTRAINT users_username_unique UNIQUE (username)
+            );
         `);
+
+        // Criar tabela barbers
+        console.log('Criando tabela barbers...');
         await client.query(`
-            CREATE TABLE IF NOT EXISTS barbers (
+            CREATE TABLE barbers (
                 id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL
-            )
+                name TEXT NOT NULL,
+                CONSTRAINT barbers_name_unique UNIQUE (name)
+            );
         `);
+
+        // Criar tabela appointments
+        console.log('Criando tabela appointments...');
         await client.query(`
-            CREATE TABLE IF NOT EXISTS appointments (
+            CREATE TABLE appointments (
                 id SERIAL PRIMARY KEY,
-                date TEXT NOT NULL,
-                time TEXT NOT NULL,
+                date DATE NOT NULL,
+                time TIME NOT NULL,
                 barber_id INTEGER NOT NULL,
                 client_id INTEGER NOT NULL,
-                FOREIGN KEY (barber_id) REFERENCES barbers(id),
-                FOREIGN KEY (client_id) REFERENCES users(id)
-            )
+                FOREIGN KEY (barber_id) REFERENCES barbers(id) ON DELETE RESTRICT,
+                FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE RESTRICT
+            );
         `);
 
-        // Insere usuário admin padrão
-        const adminRes = await client.query('SELECT * FROM users WHERE username = $1', ['admin']);
-        if (adminRes.rows.length === 0) {
-            await client.query(
-                'INSERT INTO users (username, password, role, name, phone) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (username) DO NOTHING',
-                ['admin', 'admin123', 'admin', 'Administrador', '123456789']
-            );
-            console.log('Usuário admin criado com sucesso');
-        }
+        // Inserir dados iniciais
+        console.log('Inserindo dados iniciais...');
+        await client.query(`
+            INSERT INTO users (username, password, role, name, phone) 
+            VALUES 
+                ('admin', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'admin', 'Administrador', '123456789'),
+                ('cliente1', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'client', 'Cliente Teste 1', '987654321'),
+                ('cliente2', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'client', 'Cliente Teste 2', '912345678')
+            ON CONFLICT ON CONSTRAINT users_username_unique DO NOTHING;
 
-        // Insere barbeiros padrão
-        const barberRes = await client.query('SELECT * FROM barbers WHERE name = $1', ['João Silva']);
-        if (barberRes.rows.length === 0) {
-            await client.query('INSERT INTO barbers (name) VALUES ($1) ON CONFLICT (name) DO NOTHING', ['João Silva']);
-            await client.query('INSERT INTO barbers (name) VALUES ($1) ON CONFLICT (name) DO NOTHING', ['Maria Santos']);
-            console.log('Barbeiros padrão criados com sucesso');
-        }
+            INSERT INTO barbers (name) 
+            VALUES 
+                ('João Silva'),
+                ('Maria Santos')
+            ON CONFLICT ON CONSTRAINT barbers_name_unique DO NOTHING;
+        `);
 
         await client.query('COMMIT');
-        console.log('Tabelas e dados iniciais criados com sucesso');
+        console.log('Tabelas criadas e dados iniciais inseridos com sucesso');
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('Erro ao criar tabelas ou inserir dados iniciais:', err);
+        throw err;
     } finally {
         client.release();
     }
-})();
+}
+
+// Executar a configuração das tabelas ao iniciar o servidor
+setupTables().catch(err => {
+    console.error('Erro ao executar setupTables:', err);
+    process.exit(1);
+});
 
 // Endpoint de login
 app.post('/api/login', async (req, res) => {
@@ -440,7 +459,6 @@ app.post('/api/appointments', async (req, res) => {
                     return res.status(400).json({ error: 'Data inicial inválida' });
                 }
 
-                const dayOfWeek = startDate.getDay();
                 const endDate = new Date('2025-12-31');
                 const values = [];
                 const params = [];
@@ -457,9 +475,11 @@ app.post('/api/appointments', async (req, res) => {
 
                 if (values.length > 0) {
                     // Verificar conflitos para todas as datas
+                    const conflictParams = [barber_id, ...params.filter((_, i) => i % 4 === 1 || i % 4 === 2)];
+                    const conflictValues = values.map((_, i) => `($${i * 2 + 2}, $${i * 2 + 3})`).join(',');
                     const conflictCheck = await client.query(
-                        `SELECT date, time FROM appointments WHERE barber_id = $1 AND (date, time) IN (${values.map((_, i) => `($$  {i * 4 + 2},   $${paramIndex + i})`).join(',')})`,
-                        [barber_id, ...params.filter((_, i) => i % 4 === 1 || i % 4 === 2)],
+                        `SELECT date, time FROM appointments WHERE barber_id = $1 AND (date, time) IN (${conflictValues})`,
+                        conflictParams,
                         { timeout: 3000 }
                     );
 
