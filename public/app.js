@@ -46,12 +46,32 @@ async function showAdminPanel() {
 }
 
 
-// Função de login (próxima da linha 54)
+// Função de login 
 async function login(event) {
-    event.preventDefault();
+    // Prevenir comportamento padrão apenas se event for fornecido
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
 
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+
+    // Validar se os inputs existem
+    if (!usernameInput || !passwordInput) {
+        console.error('Erro: Inputs de usuário ou senha não encontrados');
+        alert('Erro: Campos de usuário ou senha não encontrados');
+        return;
+    }
+
+    const username = usernameInput.value;
+    const password = passwordInput.value;
+
+    // Validar entrada
+    if (!username || !password) {
+        console.error('Erro: Usuário e senha são obrigatórios');
+        alert('Por favor, preencha usuário e senha');
+        return;
+    }
 
     try {
         const response = await fetch('/api/login', {
@@ -63,7 +83,8 @@ async function login(event) {
         // Verificar se a resposta é JSON
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Resposta do servidor não é JSON');
+            const text = await response.text();
+            throw new Error(`Resposta do servidor não é JSON: ${text}`);
         }
 
         const data = await response.json();
@@ -74,7 +95,7 @@ async function login(event) {
 
         // Login bem-sucedido
         console.log('Login bem-sucedido:', data);
-        // Exemplo: redirecionar para a página de agendamento
+        // Redirecionar para a página de agendamento (ajuste conforme necessário)
         window.location.href = '/dashboard.html';
     } catch (err) {
         console.error('Erro no login:', err.message);
