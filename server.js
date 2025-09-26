@@ -3,6 +3,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
 const app = express();
+const bcrypt = require('bcryptjs');
 
 
 
@@ -130,32 +131,47 @@ setupTables().catch(err => {
     process.exit(1);
 });
 
+
+
+
 // Endpoint de login
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    console.log('Tentativa de login:', { username });
+
+    // Validar entrada
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
+    }
+
     try {
-        const client = await pool.connect();
-        const result = await client.query(
-            'SELECT * FROM users WHERE username = $1 AND password = $2',
-            [username, password]
-        );
-        client.release();
-        if (result.rows.length === 0) {
-            console.log('Credenciais inválidas para:', username);
-            return res.status(401).json({ error: 'Credenciais inválidas' });
+        // Consultar usuário no banco
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = result.rows[0];
+
+        // Verificar se o usuário existe
+        if (!user) {
+            return res.status(401).json({ error: 'Usuário não encontrado' });
         }
-        console.log('Usuário encontrado:', result.rows[0]);
-        res.json({ 
-            id: result.rows[0].id, 
-            role: result.rows[0].role, 
-            username: result.rows[0].username,
-            name: result.rows[0].name,
-            phone: result.rows[0].phone
+
+        // Verificar senha
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Senha incorreta' });
+        }
+
+        // Login bem-sucedido
+        res.status(200).json({
+            message: 'Login bem-sucedido',
+            user: {
+                id: user.id,
+                username: user.username,
+                role: user.role,
+                name: user.name
+            }
         });
     } catch (err) {
-        console.error('Erro no login:', err);
-        res.status(500).json({ error: 'Erro no servidor', details: err.message });
+        console.error('Erro no endpoint /api/login:', err);
+        res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
 

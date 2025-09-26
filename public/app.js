@@ -45,32 +45,40 @@ async function showAdminPanel() {
     initializeAdminCalendar();
 }
 
-// Função de login
-async function login() {
-    const username = document.getElementById('login-username').value;
-    const password = document.getElementById('login-password').value;
-    console.log('Enviando para o backend:', { username, password });
+
+// Função de login (próxima da linha 54)
+async function login(event) {
+    event.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
+
+        // Verificar se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Resposta do servidor não é JSON');
+        }
+
         const data = await response.json();
-        console.log('Resposta do backend:', data);
-        if (data.error) {
-            alert(data.error);
-            return;
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro no login');
         }
-        user = data;
-        if (data.role === 'client') {
-            showClientPanel();
-        } else {
-            showAdminPanel();
-        }
-    } catch (error) {
-        console.error('Erro no login:', error);
-        alert('Erro ao tentar logar');
+
+        // Login bem-sucedido
+        console.log('Login bem-sucedido:', data);
+        // Exemplo: redirecionar para a página de agendamento
+        window.location.href = '/dashboard.html';
+    } catch (err) {
+        console.error('Erro no login:', err.message);
+        alert(err.message || 'Erro ao fazer login. Tente novamente.');
     }
 }
 
