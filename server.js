@@ -6,7 +6,6 @@ const app = express();
 const bcrypt = require('bcryptjs');
 
 
-
 // Configuração do pool do PostgreSQL 
 const pg = require('pg'); // Importar o módulo pg
 const pool = new pg.Pool({
@@ -135,27 +134,43 @@ setupTables().catch(err => {
 
 
 
+
+// Configurar middlewares
+app.use(express.json());
+
+// Adicionar CORS (se necessário)
+const cors = require('cors');
+app.use(cors());
+
 // Endpoint de login
 app.post('/api/login', async (req, res) => {
+    console.log('Requisição recebida em /api/login:', req.body);
+
     const { username, password } = req.body;
 
     if (!username || !password) {
+        console.log('Erro: Usuário ou senha não fornecidos');
         return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     }
 
     try {
+        console.log('Conectando ao banco para consultar usuário:', username);
         const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
         const user = result.rows[0];
 
         if (!user) {
+            console.log('Usuário não encontrado:', username);
             return res.status(401).json({ error: 'Usuário não encontrado' });
         }
 
+        console.log('Verificando senha para usuário:', username);
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
+            console.log('Senha incorreta para usuário:', username);
             return res.status(401).json({ error: 'Senha incorreta' });
         }
 
+        console.log('Login bem-sucedido para usuário:', username);
         res.status(200).json({
             message: 'Login bem-sucedido',
             user: {
@@ -166,8 +181,8 @@ app.post('/api/login', async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Erro no endpoint /api/login:', err);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        console.error('Erro no endpoint /api/login:', err.message, err.stack);
+        res.status(500).json({ error: 'Erro interno do servidor', details: err.message });
     }
 });
 // Endpoint de cadastro

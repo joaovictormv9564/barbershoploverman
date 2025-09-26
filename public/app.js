@@ -57,6 +57,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Função de login
+
+document.addEventListener('DOMContentLoaded', () => {
+    const loginButton = document.querySelector('#login-section button[onclick="login()"]');
+    if (loginButton) {
+        loginButton.addEventListener('click', login);
+    } else {
+        console.warn('Botão de login não encontrado');
+    }
+});
+
 async function login(event) {
     if (event && typeof event.preventDefault === 'function') {
         event.preventDefault();
@@ -81,6 +91,7 @@ async function login(event) {
     }
 
     try {
+        console.log('Enviando requisição para /api/login:', { username });
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
