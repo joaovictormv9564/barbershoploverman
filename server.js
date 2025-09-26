@@ -139,28 +139,23 @@ setupTables().catch(err => {
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
-    // Validar entrada
     if (!username || !password) {
         return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     }
 
     try {
-        // Consultar usuário no banco
         const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
         const user = result.rows[0];
 
-        // Verificar se o usuário existe
         if (!user) {
             return res.status(401).json({ error: 'Usuário não encontrado' });
         }
 
-        // Verificar senha
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ error: 'Senha incorreta' });
         }
 
-        // Login bem-sucedido
         res.status(200).json({
             message: 'Login bem-sucedido',
             user: {
@@ -175,7 +170,6 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
-
 // Endpoint de cadastro
 app.post('/api/register', async (req, res) => {
     const { username, password, name, phone } = req.body;
