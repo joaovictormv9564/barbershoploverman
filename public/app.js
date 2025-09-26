@@ -1309,10 +1309,10 @@ async function createAppointment() {
         const result = await response.json();
 
         if (!response.ok) {
-            throw new Error(result.error || `Erro HTTP ${response.status}`);
+            throw new Error(`${result.error || `Erro HTTP ${response.status}`}${result.details ? `: ${result.details}` : ''}${result.conflicts ? ` (Conflitos: ${JSON.stringify(result.conflicts)})` : ''}`);
         }
         if (result.error) {
-            throw new Error(result.error);
+            throw new Error(`${result.error}${result.details ? `: ${result.details}` : ''}${result.conflicts ? ` (Conflitos: ${JSON.stringify(result.conflicts)})` : ''}`);
         }
 
         alert(`✅ Agendamento criado com sucesso! ${isRecurring ? `(${result.recurringCount || 0} agendamentos recorrentes criados)` : ''}`);

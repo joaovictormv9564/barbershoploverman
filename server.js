@@ -372,19 +372,42 @@ app.get('/api/appointments/check', async (req, res) => {
 
 // Endpoint para criar agendamento
 app.post('/api/appointments', async (req, res) => {
-    const { date, time, barber_id, client_id } = req.body;
-    console.log('Tentativa de criar agendamento:', { date, time, barber_id, client_id });
-    
+    const { date, time, barber_id, client_id, is_recurring } = req.body;
+    console.log('Tentativa de criar agendamento:', { date, time, barber_id, client_id, is_recurring });
+
     if (!date || !time || !barber_id || !client_id) {
+        console.log('Campos obrigatórios faltando:', { date, time, barber_id, client_id });
         return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
     }
-    
+
     try {
         const client = await pool.connect();
         try {
             await client.query('BEGIN', { timeout: 3000 });
 
-            // Verificar se o horário já está ocupado
+            // Validar barber_id e client_id
+            const barberCheck = await client.query('SELECT id FROM barbers WHERE id = $1', [barber_id], { timeout: 3000 });
+            if (barberCheck.rows.length === 0) {
+                console.log('Barbeiro não encontrado:', barber_id);
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Barbeiro não encontrado' });
+            }
+
+            const clientCheck = await client.query('SELECT id FROM users WHERE id = $1 AND role = $2', [client_id, 'client'], { timeout: 3000 });
+            if (clientCheck.rows.length === 0) {
+                console.log('Cliente não encontrado:', client_id);
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Cliente não encontrado' });
+            }
+
+            // Validar formato de data e hora
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
+                console.log('Formato de data ou hora inválido:', { date, time });
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Formato de data (YYYY-MM-DD) ou hora (HH:MM) inválido' });
+            }
+
+            // Verificar se o agendamento inicial está ocupado
             const checkResult = await client.query(
                 'SELECT * FROM appointments WHERE barber_id = $1 AND date = $2 AND time = $3',
                 [barber_id, date, time],
@@ -392,13 +415,9 @@ app.post('/api/appointments', async (req, res) => {
             );
 
             if (checkResult.rows.length > 0) {
-                await client.query('ROLLBACK');
-                client.release();
                 console.log('Horário já ocupado:', { barber_id, date, time });
-                return res.status(400).json({ 
-                    error: 'Horário já ocupado',
-                    existingAppointment: checkResult.rows[0]
-                });
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Horário já ocupado', existingAppointment: checkResult.rows[0] });
             }
 
             // Inserir o agendamento inicial
@@ -413,69 +432,68 @@ app.post('/api/appointments', async (req, res) => {
 
             // Se for recorrente, criar agendamentos para o mesmo dia da semana até 31/12/2025
             let recurringCount = 0;
-            if (req.body.is_recurring) {
+            if (is_recurring) {
                 const startDate = new Date(date);
+                if (isNaN(startDate.getTime())) {
+                    console.log('Data inicial inválida:', date);
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Data inicial inválida' });
+                }
+
+                const dayOfWeek = startDate.getDay();
                 const endDate = new Date('2025-12-31');
                 const values = [];
                 const params = [];
-                let index = 0;
+                let paramIndex = 1;
 
                 // Gerar datas para o mesmo dia da semana
                 for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 7)) {
                     if (d > startDate) { // Pular a data inicial já inserida
                         const dateStr = d.toISOString().split('T')[0];
                         params.push(barber_id, dateStr, time, client_id);
-                        values.push(`($${index * 4 + 1}, $${index * 4 + 2}, $${index * 4 + 3}, $${index * 4 + 4})`);
-                        index++;
+                        values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
                     }
                 }
 
                 if (values.length > 0) {
                     // Verificar conflitos para todas as datas
-                    const existing = await client.query(`
-                        SELECT barber_id, date, time 
-                        FROM appointments 
-                        WHERE (barber_id, date, time) IN (
-                            ${values.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3})`).join(',')}
-                        )
-                    `, params, { timeout: 3000 });
+                    const conflictCheck = await client.query(
+                        `SELECT date, time FROM appointments WHERE barber_id = $1 AND (date, time) IN (${values.map((_, i) => `($$  {i * 4 + 2},   $${paramIndex + i})`).join(',')})`,
+                        [barber_id, ...params.filter((_, i) => i % 4 === 1 || i % 4 === 2)],
+                        { timeout: 3000 }
+                    );
 
-                    const existingSet = new Set(existing.rows.map(row => `${row.barber_id}-${row.date}-${row.time}`));
-                    const insertValues = values.filter((_, i) => {
-                        const key = `${params[i * 4]}-${params[i * 4 + 1]}-${params[i * 4 + 2]}`;
-                        return !existingSet.has(key);
-                    });
-
-                    if (insertValues.length > 0) {
-                        await client.query(`
-                            INSERT INTO appointments (barber_id, date, time, client_id)
-                            VALUES ${insertValues.join(',')}
-                        `, params, { timeout: 3000 });
-                        recurringCount = insertValues.length;
-                        console.log(`Inseridos ${recurringCount} agendamentos recorrentes`);
+                    if (conflictCheck.rows.length > 0) {
+                        console.log('Conflitos encontrados em agendamentos recorrentes:', conflictCheck.rows);
+                        await client.query('ROLLBACK');
+                        return res.status(400).json({ error: 'Um ou mais horários recorrentes já estão ocupados', conflicts: conflictCheck.rows });
                     }
+
+                    // Inserir agendamentos recorrentes
+                    await client.query(
+                        `INSERT INTO appointments (barber_id, date, time, client_id) VALUES ${values.join(',')}`,
+                        params,
+                        { timeout: 3000 }
+                    );
+                    recurringCount = values.length / 4; // Cada agendamento usa 4 parâmetros
+                    console.log(`Inseridos ${recurringCount} agendamentos recorrentes`);
                 }
             }
 
             await client.query('COMMIT', { timeout: 3000 });
-            client.release();
-            res.json({ 
+            res.json({
                 message: 'Agendamento criado com sucesso',
-                appointmentId: appointmentId,
-                recurringCount: recurringCount
+                appointmentId,
+                recurringCount
             });
-        } catch (err) {
-            await client.query('ROLLBACK');
+        } finally {
             client.release();
-            console.error('Erro ao criar agendamento:', err);
-            res.status(500).json({ error: 'Erro no servidor', details: err.message });
         }
     } catch (err) {
-        console.error('Erro ao conectar ao banco:', err);
+        console.error('Erro ao criar agendamento:', err);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
-
 
 // Endpoint para deletar agendamento
 app.delete('/api/appointments/:id', async (req, res) => {

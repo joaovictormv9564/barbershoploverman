@@ -1,6 +1,6 @@
 -- Tabela de usuários (admins e clientes)
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     role TEXT NOT NULL, -- 'admin' ou 'client'
@@ -10,25 +10,36 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Tabela de barbeiros
 CREATE TABLE IF NOT EXISTS barbers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL
 );
 
 -- Tabela de agendamentos
 CREATE TABLE IF NOT EXISTS appointments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL, -- Formato: YYYY-MM-DD
-    time TEXT NOT NULL, -- Formato: HH:00
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL, -- Formato: YYYY-MM-DD
+    time TIME NOT NULL, -- Formato: HH:MM
     barber_id INTEGER NOT NULL,
     client_id INTEGER NOT NULL,
-    FOREIGN KEY (barber_id) REFERENCES barbers(id),
-    FOREIGN KEY (client_id) REFERENCES users(id)
+    FOREIGN KEY (barber_id) REFERENCES barbers(id) ON DELETE RESTRICT,
+    FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE RESTRICT
 );
 
 -- Inserir admin padrão (usuário: admin, senha: admin123)
-INSERT OR IGNORE INTO users (username, password, role, name, phone) 
-VALUES ('admin', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'admin', 'Administrador', '123456789');
+INSERT INTO users (username, password, role, name, phone) 
+VALUES ('admin', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'admin', 'Administrador', '123456789')
+ON CONFLICT (username) DO NOTHING;
+
+-- Inserir clientes de exemplo
+INSERT INTO users (username, password, role, name, phone) 
+VALUES 
+    ('cliente1', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'client', 'Cliente Teste 1', '987654321'),
+    ('cliente2', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'client', 'Cliente Teste 2', '912345678')
+ON CONFLICT (username) DO NOTHING;
 
 -- Inserir barbeiros de exemplo
-INSERT OR IGNORE INTO barbers (name) VALUES ('João Silva');
-INSERT OR IGNORE INTO barbers (name) VALUES ('Maria Santos');
+INSERT INTO barbers (name) 
+VALUES 
+    ('João Silva'),
+    ('Maria Santos')
+ON CONFLICT (name) DO NOTHING;
