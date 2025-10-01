@@ -48,7 +48,7 @@ app.use(express.static('public'));
 
 
 
-// Função para configurar tabelas (sem criptografia)
+// Função para configurar tabelas 
 async function setupTables() {
     let retries = 3;
     while (retries > 0) {
@@ -153,20 +153,27 @@ setupTables().catch(err => {
 
 // Iniciar servidor após configuração do banco
 const port = process.env.PORT || 3000;
-setupTables()
-    .then(() => {
+async function startServer() {
+    try {
+        console.log('Iniciando servidor, verificando banco...');
+        await pool.query('SELECT 1', [], { timeout: 1000 });
+        console.log('Conexão com o banco confirmada, chamando setupTables...');
+        await setupTables();
         app.listen(port, () => {
             console.log(`Servidor rodando em http://localhost:${port}`);
         });
-    })
-    .catch(err => {
-        console.error('Erro ao configurar o banco antes de iniciar o servidor:', {
+    } catch (err) {
+        console.error('Erro ao iniciar o servidor:', {
             message: err.message,
-            stack: err.stack
+            stack: err.stack,
+            code: err.code,
+            detail: err.detail,
+            vercelInvocationId: process.env.VERCEL_INVOCATION_ID || 'unknown'
         });
         process.exit(1);
-    });
-
+    }
+}
+startServer();
 
 
 
@@ -182,39 +189,89 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type']
 }));
-
+app.get('/api/health', async (req, res) => {
+    try {
+        console.log('Verificando health check...');
+        await pool.query('SELECT 1', [], { timeout: 1000 });
+        console.log('Conexão com o banco bem-sucedida');
+        res.status(200).json({ status: 'OK', database: 'connected' });
+    } catch (err) {
+        console.error('Erro no health check:', {
+            message: err.message,
+            stack: err.stack,
+            code: err.code,
+            detail: err.detail,
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        res.status(500).json({ 
+            status: 'ERROR', 
+            error: 'Falha na conexão com o banco', 
+            details: err.message || 'Erro desconhecido',
+            code: err.code || 'UNKNOWN'
+        });
+    }
+});
 // Endpoint de login 
 app.post('/api/login', async (req, res) => {
-    console.log('Requisição recebida em /api/login:', req.body);
+    console.log('Requisição recebida em /api/login:', req.body, {
+        vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+    });
 
     const { username, password } = req.body;
 
     if (!username || !password) {
-        console.log('Erro: Usuário ou senha não fornecidos');
+        console.log('Erro: Usuário ou senha não fornecidos', {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
         return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     }
 
     try {
-        // Verificar conexão com o banco
-        console.log('Testando conexão com o banco para /api/login');
-        await pool.query('SELECT 1'); // Query de teste simples
+        console.log('Testando conexão com o banco para /api/login', {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        await pool.query('SELECT 1', [], { timeout: 1000 });
 
-        console.log('Conectando ao banco para consultar usuário:', username);
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username], { timeout: 2000 });
+        console.log('Verificando existência da tabela users', {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        const tableCheck = await pool.query(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+            ['users'], { timeout: 1000 }
+        );
+        if (!tableCheck.rows[0].exists) {
+            console.error('Tabela users não encontrada', {
+                vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+            });
+            return res.status(500).json({ error: 'Erro interno do servidor', details: 'Tabela users não encontrada' });
+        }
+
+        console.log('Consultando usuário:', username, {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username], { timeout: 1000 });
         const user = result.rows[0];
 
         if (!user) {
-            console.log('Usuário não encontrado:', username);
+            console.log('Usuário não encontrado:', username, {
+                vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+            });
             return res.status(401).json({ error: 'Usuário não encontrado' });
         }
 
-        console.log('Verificando senha para usuário:', username);
+        console.log('Verificando senha para usuário:', username, {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
         if (password !== user.password) {
-            console.log('Senha incorreta para usuário:', username);
+            console.log('Senha incorreta para usuário:', username, {
+                vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+            });
             return res.status(401).json({ error: 'Senha incorreta' });
         }
 
-        console.log('Login bem-sucedido para usuário:', username);
+        console.log('Login bem-sucedido para usuário:', username, {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
         res.status(200).json({
             message: 'Login bem-sucedido',
             user: {
@@ -229,12 +286,14 @@ app.post('/api/login', async (req, res) => {
             message: err.message,
             stack: err.stack,
             code: err.code,
-            detail: err.detail
+            detail: err.detail,
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
         res.status(500).json({ 
             error: 'Erro interno do servidor', 
             details: err.message || 'Falha ao processar login',
-            code: err.code || 'UNKNOWN'
+            code: err.code || 'UNKNOWN',
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
     }
 });
