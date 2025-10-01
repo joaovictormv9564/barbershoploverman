@@ -4,7 +4,6 @@ const path = require('path');
 const app = express();
 
 
-// Configuração do pool do PostgreSQL 
 const { Pool } = require('pg');
 const pool = new Pool({
     host: process.env.PGHOST,
@@ -12,10 +11,19 @@ const pool = new Pool({
     user: process.env.PGUSER,
     password: process.env.PGPASSWORD,
     port: process.env.PGPORT || 5432,
-    ssl: process.env.PGHOST ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 5000
+    ssl: { rejectUnauthorized: false },
+    max: 5, // Reduzido para Vercel
+    idleTimeoutMillis: 5000,
+    connectionTimeoutMillis: 2000,
+    keepAlive: true
+});
+
+// Reconectar automaticamente em caso de erro
+pool.on('error', (err, client) => {
+    console.error('Erro inesperado no pool de conexões:', {
+        message: err.message,
+        stack: err.stack
+    });
 });
 
 // Verificar variáveis de ambiente
@@ -120,14 +128,21 @@ setupTables().catch(err => {
     process.exit(1);
 });
 
-// Iniciar servidor
+// Iniciar servidor após configuração do banco
 const port = process.env.PORT || 3000;
-app.listen(port, () => {
-    console.log(`Servidor rodando em http://localhost:${port}`);
-}).on('error', (err) => {
-    console.error('Erro ao iniciar o servidor:', err.message);
-    process.exit(1);
-});
+setupTables()
+    .then(() => {
+        app.listen(port, () => {
+            console.log(`Servidor rodando em http://localhost:${port}`);
+        });
+    })
+    .catch(err => {
+        console.error('Erro ao configurar o banco antes de iniciar o servidor:', {
+            message: err.message,
+            stack: err.stack
+        });
+        process.exit(1);
+    });
 
 
 
@@ -144,6 +159,7 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type']
 }));
+
 // Endpoint de login 
 app.post('/api/login', async (req, res) => {
     console.log('Requisição recebida em /api/login:', req.body);
@@ -156,8 +172,12 @@ app.post('/api/login', async (req, res) => {
     }
 
     try {
+        // Verificar conexão com o banco
+        console.log('Testando conexão com o banco para /api/login');
+        await pool.query('SELECT 1'); // Query de teste simples
+
         console.log('Conectando ao banco para consultar usuário:', username);
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username], { timeout: 3000 });
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username], { timeout: 2000 });
         const user = result.rows[0];
 
         if (!user) {
@@ -182,8 +202,17 @@ app.post('/api/login', async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Erro no endpoint /api/login:', err.message, err.stack);
-        res.status(500).json({ error: 'Erro interno do servidor', details: err.message });
+        console.error('Erro no endpoint /api/login:', {
+            message: err.message,
+            stack: err.stack,
+            code: err.code,
+            detail: err.detail
+        });
+        res.status(500).json({ 
+            error: 'Erro interno do servidor', 
+            details: err.message || 'Falha ao processar login',
+            code: err.code || 'UNKNOWN'
+        });
     }
 });
 // Endpoint de cadastro
