@@ -1,32 +1,58 @@
-let user = null;
-let clientCalendar = null;
-let adminCalendar = null;
-let currentBarberId = null;
+// Declarações globais
+window.user = null;
+window.clientCalendar = null;
+window.adminCalendar = null;
+window.currentBarberId = null;
 
-// Funções para mostrar/esconder seções
 function showLogin() {
-    document.getElementById('login-section').style.display = 'block';
-    document.getElementById('register-section').style.display = 'none';
-    document.getElementById('client-section').style.display = 'none';
-    document.getElementById('admin-section').style.display = 'none';
+    const loginSection = document.getElementById('login-section');
+    const registerSection = document.getElementById('register-section');
+    const clientSection = document.getElementById('client-section');
+    const adminSection = document.getElementById('admin-section');
+
+    if (loginSection) loginSection.style.display = 'block';
+    else console.error('Erro: Elemento login-section não encontrado');
+    
+    if (registerSection) registerSection.style.display = 'none';
+    if (clientSection) clientSection.style.display = 'none';
+    if (adminSection) adminSection.style.display = 'none';
 }
 
 function showRegister() {
-    document.getElementById('login-section').style.display = 'none';
-    document.getElementById('register-section').style.display = 'block';
-    document.getElementById('client-section').style.display = 'none';
-    document.getElementById('admin-section').style.display = 'none';
+    const loginSection = document.getElementById('login-section');
+    const registerSection = document.getElementById('register-section');
+    const clientSection = document.getElementById('client-section');
+    const adminSection = document.getElementById('admin-section');
+
+    if (loginSection) loginSection.style.display = 'none';
+    if (registerSection) registerSection.style.display = 'block';
+    else console.error('Erro: Elemento register-section não encontrado');
+    
+    if (clientSection) clientSection.style.display = 'none';
+    if (adminSection) adminSection.style.display = 'none';
 }
 
 function showClientPanel() {
-    document.getElementById('login-section').style.display = 'none';
-    document.getElementById('register-section').style.display = 'none';
-    document.getElementById('client-section').style.display = 'block';
-    document.getElementById('admin-section').style.display = 'none';
-    document.getElementById('client-username').textContent = user.username;
+    const loginSection = document.getElementById('login-section');
+    const registerSection = document.getElementById('register-section');
+    const clientSection = document.getElementById('client-section');
+    const adminSection = document.getElementById('admin-section');
+    const clientUsername = document.getElementById('client-username');
+
+    if (loginSection) loginSection.style.display = 'none';
+    if (registerSection) registerSection.style.display = 'none';
+    if (clientSection) clientSection.style.display = 'block';
+    else console.error('Erro: Elemento client-section não encontrado');
+    if (adminSection) adminSection.style.display = 'none';
+    
+    if (clientUsername && user && user.username) {
+        clientUsername.textContent = user.username;
+    } else {
+        console.error('Erro: Elemento client-username ou user não encontrado');
+    }
+    
     loadBarbersForClient();
     initializeClientCalendar();
-    setTimeout(initializeClientCalendar, 100);
 }
 
 async function showAdminPanel() {
@@ -45,16 +71,6 @@ async function showAdminPanel() {
     initializeAdminCalendar();
 }
 
-
-// Garantir que o DOM esteja carregado antes de acessar elementos
-document.addEventListener('DOMContentLoaded', () => {
-    const loginButton = document.querySelector('#login-section button[onclick="login()"]');
-    if (loginButton) {
-        loginButton.addEventListener('click', login);
-    } else {
-        console.warn('Botão de login não encontrado');
-    }
-});
 
 // Função de login
 document.addEventListener('DOMContentLoaded', () => {
@@ -109,8 +125,16 @@ async function login(event) {
             throw new Error(data.error || 'Erro no login');
         }
 
+        // Atualizar variável global user
+        window.user = data.user;
         console.log('Login bem-sucedido:', data);
-        window.location.href = '/dashboard.html'; // Ajuste para a página correta
+
+        // Exibir painel apropriado com base na role
+        if (data.user.role === 'admin') {
+            showAdminPanel();
+        } else {
+            showClientPanel();
+        }
     } catch (err) {
         console.error('Erro no login:', err.message);
         alert(err.message || 'Erro ao fazer login. Tente novamente.');
@@ -141,11 +165,10 @@ async function register() {
     }
 }
 
-// Função de logout
 function logout() {
-    user = null;
-    clientCalendar = null;
-    adminCalendar = null;
+    window.user = null;
+    window.clientCalendar = null;
+    window.adminCalendar = null;
     showLogin();
 }
 
@@ -819,18 +842,23 @@ function add30Minutes(timeStr) {
 
 // Função para criar agendamento
 async function createAppointment(barberId, date, time) {
+    if (!window.user || !window.user.id) {
+        console.error('Erro: Usuário não está logado');
+        alert('Erro: Você precisa estar logado para agendar');
+        return;
+    }
+
     try {
         const response = await fetch('/api/appointments', {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${user?.token || ''}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({ 
                 date, 
                 time, 
-                barber_id: barberId, 
-                client_id: user?.id 
+                barber_id: parseInt(barberId), 
+                client_id: window.user.id 
             })
         });
         
@@ -842,17 +870,15 @@ async function createAppointment(barberId, date, time) {
         
         alert('✅ Agendamento realizado com sucesso!');
         
-        // Atualizar a interface
-        if (clientCalendar) {
-            clientCalendar.refetchEvents();
+        if (window.clientCalendar) {
+            window.clientCalendar.refetchEvents();
         }
         
         loadDates();
         updateTimeSelect();
-        
     } catch (error) {
         console.error('Erro ao criar agendamento:', error);
-        alert('❌ Anote sua Data, Para não esquecer ' + error.message);
+        alert('❌ Erro ao agendar: ' + error.message);
     }
 }
 

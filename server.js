@@ -1,13 +1,12 @@
 require('dotenv').config();
 const express = require('express');
-const { Pool } = require('pg');
 const path = require('path');
 const app = express();
 
 
 // Configuração do pool do PostgreSQL 
-const pg = require('pg'); // Importar o módulo pg
-const pool = new pg.Pool({
+const { Pool } = require('pg');
+const pool = new Pool({
     host: process.env.PGHOST,
     database: process.env.PGDATABASE,
     user: process.env.PGUSER,
@@ -16,9 +15,7 @@ const pool = new pg.Pool({
     ssl: process.env.PGHOST ? { rejectUnauthorized: false } : false,
     max: 10,
     idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 5000,
-    maxUses: 7500,
-    allowExitOnIdle: true
+    connectionTimeoutMillis: 5000
 });
 
 // Verificar variáveis de ambiente
@@ -39,7 +36,6 @@ pool.connect((err, client, release) => {
     console.log('Conexão com o banco Neon estabelecida com sucesso');
     release();
 });
-app.use(express.json());
 app.use(express.static('public'));
 
 
@@ -143,8 +139,11 @@ app.use(express.json());
 
 // Adicionar CORS (se necessário)
 const cors = require('cors');
-app.use(cors());
-
+app.use(cors({
+    origin: ['http://localhost:3000', 'https://barbershoploverman.vercel.app'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type']
+}));
 // Endpoint de login 
 app.post('/api/login', async (req, res) => {
     console.log('Requisição recebida em /api/login:', req.body);
@@ -158,7 +157,7 @@ app.post('/api/login', async (req, res) => {
 
     try {
         console.log('Conectando ao banco para consultar usuário:', username);
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username], { timeout: 3000 });
         const user = result.rows[0];
 
         if (!user) {
@@ -192,36 +191,32 @@ app.post('/api/register', async (req, res) => {
     const { username, password, name, phone } = req.body;
     console.log('Tentativa de cadastro:', { username, name, phone });
     try {
-        const client = await pool.connect();
-        const result = await client.query('SELECT * FROM users WHERE username = $1', [username]);
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
         if (result.rows.length > 0) {
-            client.release();
             console.log('Usuário já existe:', username);
             return res.status(400).json({ error: 'Usuário já existe' });
         }
-        await client.query(
+        await pool.query(
             'INSERT INTO users (username, password, role, name, phone) VALUES ($1, $2, $3, $4, $5) RETURNING id',
             [username, password, 'client', name, phone]
         );
-        client.release();
         console.log('Usuário registrado com sucesso:', username);
         res.json({ message: 'Usuário registrado com sucesso' });
     } catch (err) {
-        console.error('Erro ao registrar:', err);
+        console.error('Erro ao registrar:', err.message, err.stack);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
-
 // Endpoint para listar clientes (para painel admin)
 app.get('/api/users', async (req, res) => {
     try {
-        const client = await pool.connect();
+    
         const result = await client.query('SELECT id, username, name, phone FROM users WHERE role = $1', ['client']);
-        client.release();
+    
         console.log('Clientes enviados:', result.rows);
         res.json(result.rows);
     } catch (err) {
-        console.error('Erro ao listar clientes:', err);
+        console.error('Erro ao listar clientes:', err.message, err.stack);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
@@ -229,13 +224,13 @@ app.get('/api/users', async (req, res) => {
 // Endpoint para listar barbeiros
 app.get('/api/barbers', async (req, res) => {
     try {
-        const client = await pool.connect();
+        
         const result = await client.query('SELECT * FROM barbers');
-        client.release();
+        
         console.log('Barbeiros enviados:', result.rows);
         res.json(result.rows);
     } catch (err) {
-        console.error('Erro ao listar barbeiros:', err);
+        console.error('Erro ao listar barbeiros:', err.message, err.stack);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
@@ -245,19 +240,19 @@ app.post('/api/barbers', async (req, res) => {
     const { name } = req.body;
     console.log('Tentativa de adicionar barbeiro:', { name });
     try {
-        const client = await pool.connect();
+        
         const result = await client.query('SELECT * FROM barbers WHERE name = $1', [name]);
         if (result.rows.length > 0) {
-            client.release();
+            
             console.log('Barbeiro já existe:', name);
             return res.status(400).json({ error: 'Barbeiro já existe' });
         }
         await client.query('INSERT INTO barbers (name) VALUES ($1) RETURNING id', [name]);
-        client.release();
+        
         console.log('Barbeiro adicionado com sucesso:', name);
         res.json({ message: 'Barbeiro adicionado com sucesso' });
     } catch (err) {
-        console.error('Erro ao adicionar barbeiro:', err);
+        console.error('Erro ao adicionar barbeiro:', err.message, err.stack);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
@@ -268,15 +263,15 @@ app.put('/api/barbers/:id', async (req, res) => {
     const { name } = req.body;
     console.log('Tentativa de editar barbeiro:', { id, name });
     try {
-        const client = await pool.connect();
+        
         const result = await client.query('SELECT * FROM barbers WHERE name = $1 AND id != $2', [name, id]);
         if (result.rows.length > 0) {
-            client.release();
+            
             console.log('Nome de barbeiro já existe:', name);
             return res.status(400).json({ error: 'Nome de barbeiro já existe' });
         }
         const updateResult = await client.query('UPDATE barbers SET name = $1 WHERE id = $2 RETURNING id', [name, id]);
-        client.release();
+        
         if (updateResult.rowCount === 0) {
             console.log('Barbeiro não encontrado:', id);
             return res.status(404).json({ error: 'Barbeiro não encontrado' });
@@ -284,7 +279,7 @@ app.put('/api/barbers/:id', async (req, res) => {
         console.log('Barbeiro editado com sucesso:', id);
         res.json({ message: 'Barbeiro editado com sucesso' });
     } catch (err) {
-        console.error('Erro ao editar barbeiro:', err);
+        console.error('Erro ao editar barbeiro:', err.message, err.stack);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
@@ -294,9 +289,9 @@ app.delete('/api/barbers/:id', async (req, res) => {
     const { id } = req.params;
     console.log('Tentativa de deletar barbeiro:', { id });
     try {
-        const client = await pool.connect();
+        
         const result = await client.query('DELETE FROM barbers WHERE id = $1 RETURNING id', [id]);
-        client.release();
+        
         if (result.rowCount === 0) {
             console.log('Barbeiro não encontrado:', id);
             return res.status(404).json({ error: 'Barbeiro não encontrado' });
@@ -304,12 +299,11 @@ app.delete('/api/barbers/:id', async (req, res) => {
         console.log('Barbeiro deletado com sucesso:', id);
         res.json({ message: 'Barbeiro deletado com sucesso' });
     } catch (err) {
-        console.error('Erro ao deletar barbeiro:', err);
+        console.error('Erro ao deletar barbeiro:', err.message, err.stack);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
 function isAdmin(req, res, next) {
-    idade
     const isAdminUser = req.query.isAdmin === 'true' || req.headers['x-is-admin'] === 'true';
     
     if (isAdminUser) {
@@ -368,13 +362,13 @@ app.get('/api/appointments', async (req, res) => {
     console.log('Executando query de agendamentos:', query, 'com params:', params);
     
     try {
-        const client = await pool.connect();
+        
         const result = await client.query(query, params);
-        client.release();
+        
         console.log('Agendamentos encontrados:', result.rows.length);
         res.json(result.rows);
     } catch (err) {
-        console.error('Erro ao buscar agendamentos:', err);
+        console.error('Erro ao buscar agendamentos:', err.message, err.stack);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
@@ -389,12 +383,12 @@ app.get('/api/appointments/check', async (req, res) => {
     }
     
     try {
-        const client = await pool.connect();
+        
         const result = await client.query(
             'SELECT * FROM appointments WHERE barber_id = $1 AND date = $2 AND time = $3',
             [barber_id, date, time]
         );
-        client.release();
+        
         
         const isBooked = result.rows.length > 0;
         let appointmentInfo = null;
@@ -412,8 +406,9 @@ app.get('/api/appointments/check', async (req, res) => {
             appointment: appointmentInfo
         });
     } catch (err) {
-        console.error('Erro ao verificar horário:', err);
+        console.error('Erro ao verificar horário:', err.message, err.stack);
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
+        
     }
 });
 
@@ -428,7 +423,7 @@ app.post('/api/appointments', async (req, res) => {
     }
 
     try {
-        const client = await pool.connect();
+        
         try {
             await client.query('BEGIN', { timeout: 3000 });
 
@@ -604,5 +599,3 @@ app.get('/api/appointments/simple', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
