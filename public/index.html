@@ -10,7 +10,6 @@
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
     <link rel="manifest" href="/site.webmanifest">
-    <link rel="manifest" href="/site.webmanifest">
     <link rel="icon" type="image/png" href="/icon-192x192.png">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -450,7 +449,7 @@
             <button onclick="login()">Entrar</button>
             <button onclick="showRegister()">Cadastrar</button>
         </div>
-              <script src="/app.js"></script>
+            
 
         <!-- Cadastro -->
         <div id="register-section" style="display: none;">
@@ -490,7 +489,7 @@
                 <select id="time-select"></select>
             </div>
             
-            <button id="book-appointment">Agendar</button>
+            <button id="book-appointment" onclick="createAppointment()">Agendar</button>
             
             <h3>Calendário de Horários</h3>
             <div id="calendar" style="height: 500px; margin: 20px 0;"></div>
@@ -608,24 +607,24 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <script src="app.js"></script>
     <script>
-        // Efeito de interação com o mouse
-        document.addEventListener('DOMContentLoaded', function() {
-            const title = document.querySelector('.elegant-title');
-            
-            if (title) {
-                // Efeito de parallax suave
-                document.addEventListener('mousemove', function(e) {
-                    const x = (window.innerWidth / 2 - e.clientX) / 25;
-                    const y = (window.innerHeight / 2 - e.clientY) / 25;
-                    title.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${y}deg)`;
-                });
 
-                // Reset da posição quando o mouse sair
-                document.addEventListener('mouseleave', function() {
-                    title.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg)';
-                });
-            }
-        });
+    document.addEventListener('DOMContentLoaded', function() {
+        const title = document.querySelector('.elegant-title');
+        
+        if (title) {
+            // Efeito de parallax suave
+            document.addEventListener('mousemove', function(e) {
+                const x = (window.innerWidth / 2 - e.clientX) / 25;
+                const y = (window.innerHeight / 2 - e.clientY) / 25;
+                title.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${y}deg)`;
+            });
+
+            // Reset da posição quando o mouse sair
+            document.addEventListener('mouseleave', function() {
+                title.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg)';
+            });
+        }
+    });
 
         // Alternar entre animações 
         function cycleAnimations() {

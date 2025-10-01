@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Tabela de barbeiros
 CREATE TABLE IF NOT EXISTS barbers (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL
+    name TEXT UNIQUE NOT NULL
 );
 
 -- Tabela de agendamentos
@@ -27,14 +27,14 @@ CREATE TABLE IF NOT EXISTS appointments (
 
 -- Inserir admin padrão (usuário: admin, senha: admin123)
 INSERT INTO users (username, password, role, name, phone) 
-VALUES ('admin', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'admin', 'Administrador', '123456789')
+VALUES ('admin', 'admin123', 'admin', 'Administrador', '123456789')
 ON CONFLICT (username) DO NOTHING;
 
 -- Inserir clientes de exemplo
 INSERT INTO users (username, password, role, name, phone) 
 VALUES 
-    ('cliente1', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'client', 'Cliente Teste 1', '987654321'),
-    ('cliente2', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'client', 'Cliente Teste 2', '912345678')
+    ('cliente1', 'cliente123', 'client', 'Cliente Teste 1', '987654321'),
+    ('cliente2', 'cliente123', 'client', 'Cliente Teste 2', '912345678')
 ON CONFLICT (username) DO NOTHING;
 
 -- Inserir barbeiros de exemplo
