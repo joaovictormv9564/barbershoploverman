@@ -3,7 +3,6 @@ const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
 const app = express();
-const bcrypt = require('bcryptjs');
 
 
 // Configuração do pool do PostgreSQL 
@@ -45,44 +44,40 @@ app.use(express.static('public'));
 
 
 
-// cria tabelas
+// Função para configurar tabelas (sem criptografia)
 async function setupTables() {
     const client = await pool.connect();
     try {
         console.log('Iniciando configuração das tabelas...');
         await client.query('BEGIN');
 
-        // Dropar tabelas existentes
         console.log('Dropando tabelas existentes...');
-        await client.query('DROP TABLE IF EXISTS appointments CASCADE;');
-        await client.query('DROP TABLE IF EXISTS barbers CASCADE;');
-        await client.query('DROP TABLE IF EXISTS users CASCADE;');
+        await client.query(`
+            DROP TABLE IF EXISTS appointments;
+            DROP TABLE IF EXISTS barbers;
+            DROP TABLE IF EXISTS users;
+        `);
 
-        // Criar tabela users
         console.log('Criando tabela users...');
         await client.query(`
             CREATE TABLE users (
                 id SERIAL PRIMARY KEY,
-                username TEXT NOT NULL,
+                username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 role TEXT NOT NULL,
                 name TEXT,
-                phone TEXT,
-                CONSTRAINT users_username_unique UNIQUE (username)
+                phone TEXT
             );
         `);
 
-        // Criar tabela barbers
         console.log('Criando tabela barbers...');
         await client.query(`
             CREATE TABLE barbers (
                 id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                CONSTRAINT barbers_name_unique UNIQUE (name)
+                name TEXT UNIQUE NOT NULL
             );
         `);
 
-        // Criar tabela appointments
         console.log('Criando tabela appointments...');
         await client.query(`
             CREATE TABLE appointments (
@@ -96,37 +91,45 @@ async function setupTables() {
             );
         `);
 
-        // Inserir dados iniciais
         console.log('Inserindo dados iniciais...');
         await client.query(`
             INSERT INTO users (username, password, role, name, phone) 
             VALUES 
-                ('admin', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'admin', 'Administrador', '123456789'),
-                ('cliente1', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'client', 'Cliente Teste 1', '987654321'),
-                ('cliente2', '$2b$10$K.0XbKq7z7z7z7z7z7z7z.O', 'client', 'Cliente Teste 2', '912345678')
-            ON CONFLICT ON CONSTRAINT users_username_unique DO NOTHING;
+                ('admin', 'admin123', 'admin', 'Administrador', '123456789'),
+                ('cliente1', 'cliente123', 'client', 'Cliente Teste 1', '987654321'),
+                ('cliente2', 'cliente123', 'client', 'Cliente Teste 2', '912345678')
+            ON CONFLICT (username) DO NOTHING;
 
             INSERT INTO barbers (name) 
             VALUES 
                 ('João Silva'),
                 ('Maria Santos')
-            ON CONFLICT ON CONSTRAINT barbers_name_unique DO NOTHING;
+            ON CONFLICT (name) DO NOTHING;
         `);
 
         await client.query('COMMIT');
         console.log('Tabelas criadas e dados iniciais inseridos com sucesso');
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('Erro ao criar tabelas ou inserir dados iniciais:', err);
+        console.error('Erro ao criar tabelas ou inserir dados iniciais:', err.message, err.stack);
         throw err;
     } finally {
         client.release();
     }
 }
 
-// Executar a configuração das tabelas ao iniciar o servidor
+// Executar configuração das tabelas
 setupTables().catch(err => {
-    console.error('Erro ao executar setupTables:', err);
+    console.error('Erro ao executar setupTables:', err.message);
+    process.exit(1);
+});
+
+// Iniciar servidor
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+    console.log(`Servidor rodando em http://localhost:${port}`);
+}).on('error', (err) => {
+    console.error('Erro ao iniciar o servidor:', err.message);
     process.exit(1);
 });
 
@@ -142,7 +145,7 @@ app.use(express.json());
 const cors = require('cors');
 app.use(cors());
 
-// Endpoint de login
+// Endpoint de login 
 app.post('/api/login', async (req, res) => {
     console.log('Requisição recebida em /api/login:', req.body);
 
@@ -164,8 +167,7 @@ app.post('/api/login', async (req, res) => {
         }
 
         console.log('Verificando senha para usuário:', username);
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
+        if (password !== user.password) {
             console.log('Senha incorreta para usuário:', username);
             return res.status(401).json({ error: 'Senha incorreta' });
         }

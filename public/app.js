@@ -57,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Função de login
-
 document.addEventListener('DOMContentLoaded', () => {
     const loginButton = document.querySelector('#login-section button[onclick="login()"]');
     if (loginButton) {
