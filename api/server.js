@@ -3,6 +3,25 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
+// Middleware para capturar erros globais
+app.use((err, req, res, next) => {
+    console.error('Erro global capturado:', {
+        message: err.message,
+        stack: err.stack,
+        code: err.code,
+        detail: err.detail,
+        path: req.path,
+        method: req.method,
+        vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+    });
+    res.status(500).json({
+        error: 'Erro interno do servidor',
+        details: err.message || 'Erro desconhecido',
+        code: err.code || 'UNKNOWN',
+        vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+    });
+});
+
 
 const { Pool } = require('pg');
 const pool = new Pool({
@@ -46,35 +65,48 @@ pool.connect((err, client, release) => {
 });
 app.use(express.static('public'));
 
-
+// Função auxiliar para timeout
+const withTimeout = (promise, ms) => {
+    const timeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error(`Query timeout após ${ms}ms`)), ms);
+    });
+    return Promise.race([promise, timeout]);
+};
 
 // Função para configurar tabelas 
 async function setupTables() {
     let retries = 3;
     while (retries > 0) {
-        const client = await pool.connect();
+        let client;
         try {
-            console.log('Iniciando configuração das tabelas... Tentativa:', 4 - retries);
-            await client.query('BEGIN');
+            console.log('Testando conexão com o banco antes de setupTables... Tentativa:', 4 - retries);
+            client = await pool.connect();
+            await withTimeout(client.query('SELECT 1'), 1000);
 
-            // Verificar se tabelas existem
-            const tableCheck = await client.query(
-                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
-                ['users'], { timeout: 1500 }
+            console.log('Iniciando configuração das tabelas... Tentativa:', 4 - retries);
+            await withTimeout(client.query('BEGIN'), 1000);
+
+            // Verificar se a tabela users existe
+            const tableCheck = await withTimeout(
+                client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", ['users']),
+                1000
             );
             if (tableCheck.rows[0].exists) {
                 console.log('Tabela users já existe, verificando dados iniciais...');
-                const adminCheck = await client.query('SELECT * FROM users WHERE username = $1', ['admin']);
+                const adminCheck = await withTimeout(
+                    client.query('SELECT * FROM users WHERE username = $1', ['admin']),
+                    1000
+                );
                 if (adminCheck.rows.length > 0) {
                     console.log('Dados iniciais já existem, pulando criação.');
-                    await client.query('COMMIT');
+                    await withTimeout(client.query('COMMIT'), 1000);
                     return;
                 }
             }
 
             // Criar tabelas apenas se necessário
             console.log('Criando tabela users...');
-            await client.query(`
+            await withTimeout(client.query(`
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
                     username TEXT UNIQUE NOT NULL,
@@ -83,18 +115,18 @@ async function setupTables() {
                     name TEXT,
                     phone TEXT
                 );
-            `);
+            `), 1000);
 
             console.log('Criando tabela barbers...');
-            await client.query(`
+            await withTimeout(client.query(`
                 CREATE TABLE IF NOT EXISTS barbers (
                     id SERIAL PRIMARY KEY,
                     name TEXT UNIQUE NOT NULL
                 );
-            `);
+            `), 1000);
 
             console.log('Criando tabela appointments...');
-            await client.query(`
+            await withTimeout(client.query(`
                 CREATE TABLE IF NOT EXISTS appointments (
                     id SERIAL PRIMARY KEY,
                     date DATE NOT NULL,
@@ -104,10 +136,10 @@ async function setupTables() {
                     FOREIGN KEY (barber_id) REFERENCES barbers(id) ON DELETE RESTRICT,
                     FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE RESTRICT
                 );
-            `);
+            `), 1000);
 
             console.log('Inserindo dados iniciais...');
-            await client.query(`
+            await withTimeout(client.query(`
                 INSERT INTO users (username, password, role, name, phone) 
                 VALUES 
                     ('admin', 'admin123', 'admin', 'Administrador', '123456789'),
@@ -120,13 +152,21 @@ async function setupTables() {
                     ('João Silva'),
                     ('Maria Santos')
                 ON CONFLICT (name) DO NOTHING;
-            `);
+            `), 1000);
 
-            await client.query('COMMIT');
+            await withTimeout(client.query('COMMIT'), 1000);
             console.log('Tabelas criadas e dados iniciais inseridos com sucesso');
             return; // Sucesso, sai do loop
         } catch (err) {
-            await client.query('ROLLBACK');
+            if (client) {
+                await withTimeout(client.query('ROLLBACK'), 1000).catch(rollbackErr => {
+                    console.error('Erro ao executar ROLLBACK:', {
+                        message: rollbackErr.message,
+                        stack: rollbackErr.stack,
+                        vercelInvocationId: process.env.VERCEL_INVOCATION_ID || 'unknown'
+                    });
+                });
+            }
             console.error('Erro ao criar tabelas ou inserir dados iniciais:', {
                 message: err.message,
                 stack: err.stack,
@@ -139,9 +179,9 @@ async function setupTables() {
                 throw new Error(`Falha após 3 tentativas: ${err.message}`);
             }
             console.log(`Tentando novamente... Restam ${retries} tentativas`);
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1s antes de retry
+            await new Promise(resolve => setTimeout(resolve, 500)); // Espera 500ms antes de retry
         } finally {
-            client.release();
+            if (client) client.release();
         }
     }
 }
@@ -154,9 +194,11 @@ setupTables().catch(err => {
 // Iniciar servidor após configuração do banco
 const port = process.env.PORT || 3000;
 async function startServer() {
+    let client;
     try {
         console.log('Iniciando servidor, verificando banco...');
-        await pool.query('SELECT 1', [], { timeout: 1000 });
+        client = await pool.connect();
+        await withTimeout(client.query('SELECT 1'), 1000);
         console.log('Conexão com o banco confirmada, chamando setupTables...');
         await setupTables();
         app.listen(port, () => {
@@ -171,6 +213,8 @@ async function startServer() {
             vercelInvocationId: process.env.VERCEL_INVOCATION_ID || 'unknown'
         });
         process.exit(1);
+    } finally {
+        if (client) client.release();
     }
 }
 startServer();
@@ -226,18 +270,20 @@ app.post('/api/login', async (req, res) => {
         return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     }
 
+    let client;
     try {
-        console.log('Testando conexão com o banco para /api/login', {
+        console.log('Conectando ao banco para /api/login', {
             vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
-        await pool.query('SELECT 1', [], { timeout: 1000 });
+        client = await pool.connect();
+        await withTimeout(client.query('SELECT 1'), 1000);
 
         console.log('Verificando existência da tabela users', {
             vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
-        const tableCheck = await pool.query(
-            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
-            ['users'], { timeout: 1000 }
+        const tableCheck = await withTimeout(
+            client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", ['users']),
+            1000
         );
         if (!tableCheck.rows[0].exists) {
             console.error('Tabela users não encontrada', {
@@ -249,7 +295,10 @@ app.post('/api/login', async (req, res) => {
         console.log('Consultando usuário:', username, {
             vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username], { timeout: 1000 });
+        const result = await withTimeout(
+            client.query('SELECT * FROM users WHERE username = $1', [username]),
+            1000
+        );
         const user = result.rows[0];
 
         if (!user) {
@@ -295,6 +344,8 @@ app.post('/api/login', async (req, res) => {
             code: err.code || 'UNKNOWN',
             vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
+    } finally {
+        if (client) client.release();
     }
 });
 // Endpoint de cadastro
