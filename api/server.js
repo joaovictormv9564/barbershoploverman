@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
-// Middleware para capturar erros globais
+// Middleware para capturar erros globais e garantir respostas JSON
 app.use((err, req, res, next) => {
     console.error('Erro global capturado:', {
         message: err.message,
@@ -17,11 +17,9 @@ app.use((err, req, res, next) => {
     res.status(500).json({
         error: 'Erro interno do servidor',
         details: err.message || 'Erro desconhecido',
-        code: err.code || 'UNKNOWN',
-        vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        code: err.code || 'UNKNOWN'
     });
 });
-
 
 const { Pool } = require('pg');
 const pool = new Pool({
@@ -65,124 +63,99 @@ pool.connect((err, client, release) => {
 });
 app.use(express.static('public'));
 
-// Função auxiliar para timeout
-const withTimeout = (promise, ms) => {
-    const timeout = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error(`Query timeout após ${ms}ms`)), ms);
-    });
-    return Promise.race([promise, timeout]);
-};
+
 
 // Função para configurar tabelas 
 async function setupTables() {
-    let retries = 3;
-    while (retries > 0) {
-        let client;
-        try {
-            console.log('Testando conexão com o banco antes de setupTables... Tentativa:', 4 - retries);
-            client = await pool.connect();
-            await withTimeout(client.query('SELECT 1'), 1000);
-
-            console.log('Iniciando configuração das tabelas... Tentativa:', 4 - retries);
-            await withTimeout(client.query('BEGIN'), 1000);
-
-            // Verificar se a tabela users existe
-            const tableCheck = await withTimeout(
-                client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", ['users']),
-                1000
-            );
-            if (tableCheck.rows[0].exists) {
-                console.log('Tabela users já existe, verificando dados iniciais...');
-                const adminCheck = await withTimeout(
-                    client.query('SELECT * FROM users WHERE username = $1', ['admin']),
-                    1000
-                );
-                if (adminCheck.rows.length > 0) {
-                    console.log('Dados iniciais já existem, pulando criação.');
-                    await withTimeout(client.query('COMMIT'), 1000);
-                    return;
-                }
+    console.log('Iniciando configuração das tabelas...');
+    let client;
+    try {
+        client = await pool.connect();
+        
+        // Verificar se a tabela users existe
+        const tableCheck = await client.query(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+            ['users']
+        );
+        if (tableCheck.rows[0].exists) {
+            console.log('Tabela users já existe, verificando dados iniciais...');
+            const adminCheck = await client.query('SELECT * FROM users WHERE username = $1', ['admin']);
+            if (adminCheck.rows.length > 0) {
+                console.log('Dados iniciais já existem, pulando criação.');
+                client.release();
+                return;
             }
-
-            // Criar tabelas apenas se necessário
-            console.log('Criando tabela users...');
-            await withTimeout(client.query(`
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
-                    username TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL,
-                    role TEXT NOT NULL,
-                    name TEXT,
-                    phone TEXT
-                );
-            `), 1000);
-
-            console.log('Criando tabela barbers...');
-            await withTimeout(client.query(`
-                CREATE TABLE IF NOT EXISTS barbers (
-                    id SERIAL PRIMARY KEY,
-                    name TEXT UNIQUE NOT NULL
-                );
-            `), 1000);
-
-            console.log('Criando tabela appointments...');
-            await withTimeout(client.query(`
-                CREATE TABLE IF NOT EXISTS appointments (
-                    id SERIAL PRIMARY KEY,
-                    date DATE NOT NULL,
-                    time TIME NOT NULL,
-                    barber_id INTEGER NOT NULL,
-                    client_id INTEGER NOT NULL,
-                    FOREIGN KEY (barber_id) REFERENCES barbers(id) ON DELETE RESTRICT,
-                    FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE RESTRICT
-                );
-            `), 1000);
-
-            console.log('Inserindo dados iniciais...');
-            await withTimeout(client.query(`
-                INSERT INTO users (username, password, role, name, phone) 
-                VALUES 
-                    ('admin', 'admin123', 'admin', 'Administrador', '123456789'),
-                    ('cliente1', 'cliente123', 'client', 'Cliente Teste 1', '987654321'),
-                    ('cliente2', 'cliente123', 'client', 'Cliente Teste 2', '912345678')
-                ON CONFLICT (username) DO NOTHING;
-
-                INSERT INTO barbers (name) 
-                VALUES 
-                    ('João Silva'),
-                    ('Maria Santos')
-                ON CONFLICT (name) DO NOTHING;
-            `), 1000);
-
-            await withTimeout(client.query('COMMIT'), 1000);
-            console.log('Tabelas criadas e dados iniciais inseridos com sucesso');
-            return; // Sucesso, sai do loop
-        } catch (err) {
-            if (client) {
-                await withTimeout(client.query('ROLLBACK'), 1000).catch(rollbackErr => {
-                    console.error('Erro ao executar ROLLBACK:', {
-                        message: rollbackErr.message,
-                        stack: rollbackErr.stack,
-                        vercelInvocationId: process.env.VERCEL_INVOCATION_ID || 'unknown'
-                    });
-                });
-            }
-            console.error('Erro ao criar tabelas ou inserir dados iniciais:', {
-                message: err.message,
-                stack: err.stack,
-                code: err.code,
-                detail: err.detail,
-                vercelInvocationId: process.env.VERCEL_INVOCATION_ID || 'unknown'
-            });
-            retries--;
-            if (retries === 0) {
-                throw new Error(`Falha após 3 tentativas: ${err.message}`);
-            }
-            console.log(`Tentando novamente... Restam ${retries} tentativas`);
-            await new Promise(resolve => setTimeout(resolve, 500)); // Espera 500ms antes de retry
-        } finally {
-            if (client) client.release();
         }
+
+        // Drop e criar tabelas apenas se necessário
+        await client.query(`
+            DROP TABLE IF EXISTS appointments;
+            DROP TABLE IF EXISTS barbers;
+            DROP TABLE IF EXISTS users;
+        `);
+
+        await client.query(`
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL,
+                name TEXT,
+                phone TEXT
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE barbers (
+                id SERIAL PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE appointments (
+                id SERIAL PRIMARY KEY,
+                date DATE NOT NULL,
+                time TIME NOT NULL,
+                barber_id INTEGER NOT NULL,
+                client_id INTEGER NOT NULL,
+                FOREIGN KEY (barber_id) REFERENCES barbers(id) ON DELETE RESTRICT,
+                FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE RESTRICT
+            );
+        `);
+
+        // Inserir dados iniciais
+        await client.query(`
+            INSERT INTO users (username, password, role, name, phone) 
+            VALUES 
+                ('admin', 'admin123', 'admin', 'Administrador', '123456789'),
+                ('cliente1', 'cliente123', 'client', 'Cliente Teste 1', '987654321'),
+                ('cliente2', 'cliente123', 'client', 'Cliente Teste 2', '912345678')
+            ON CONFLICT (username) DO NOTHING;
+
+            INSERT INTO barbers (name) 
+            VALUES 
+                ('João Silva'),
+                ('Maria Santos')
+            ON CONFLICT (name) DO NOTHING;
+        `);
+
+        await client.query('COMMIT');
+        console.log('Tabelas criadas e dados iniciais inseridos com sucesso');
+    } catch (err) {
+        await client.query('ROLLBACK').catch(rollbackErr => {
+            console.error('Erro ao executar ROLLBACK:', rollbackErr.message);
+        });
+        console.error('Erro ao criar tabelas ou inserir dados iniciais:', {
+            message: err.message,
+            stack: err.stack,
+            code: err.code,
+            detail: err.detail,
+            vercelInvocationId: process.env.VERCEL_INVOCATION_ID || 'unknown'
+        });
+        throw err;
+    } finally {
+        if (client) client.release();
     }
 }
 // Executar configuração das tabelas
@@ -192,32 +165,95 @@ setupTables().catch(err => {
 });
 
 // Iniciar servidor após configuração do banco
-const port = process.env.PORT || 3000;
-async function startServer() {
+app.post('/api/login', async (req, res) => {
+    console.log('Requisição recebida em /api/login:', req.body, {
+        vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+    });
+
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        console.log('Erro: Usuário ou senha não fornecidos', {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
+    }
+
     let client;
     try {
-        console.log('Iniciando servidor, verificando banco...');
+        console.log('Conectando ao banco para /api/login', {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
         client = await pool.connect();
-        await withTimeout(client.query('SELECT 1'), 1000);
-        console.log('Conexão com o banco confirmada, chamando setupTables...');
-        await setupTables();
-        app.listen(port, () => {
-            console.log(`Servidor rodando em http://localhost:${port}`);
+        await client.query('SELECT 1');
+
+        console.log('Verificando existência da tabela users', {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        const tableCheck = await client.query(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+            ['users']
+        );
+        if (!tableCheck.rows[0].exists) {
+            console.error('Tabela users não encontrada', {
+                vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+            });
+            return res.status(500).json({ error: 'Erro interno do servidor', details: 'Tabela users não encontrada' });
+        }
+
+        console.log('Consultando usuário:', username, {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        const result = await client.query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = result.rows[0];
+
+        if (!user) {
+            console.log('Usuário não encontrado:', username, {
+                vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+            });
+            return res.status(401).json({ error: 'Usuário não encontrado' });
+        }
+
+        console.log('Verificando senha para usuário:', username, {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        if (password !== user.password) {
+            console.log('Senha incorreta para usuário:', username, {
+                vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+            });
+            return res.status(401).json({ error: 'Senha incorreta' });
+        }
+
+        console.log('Login bem-sucedido para usuário:', username, {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        res.status(200).json({
+            message: 'Login bem-sucedido',
+            user: {
+                id: user.id,
+                username: user.username,
+                role: user.role,
+                name: user.name
+            }
         });
     } catch (err) {
-        console.error('Erro ao iniciar o servidor:', {
+        console.error('Erro no endpoint /api/login:', {
             message: err.message,
             stack: err.stack,
             code: err.code,
             detail: err.detail,
-            vercelInvocationId: process.env.VERCEL_INVOCATION_ID || 'unknown'
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
-        process.exit(1);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor', 
+            details: err.message || 'Falha ao processar login',
+            code: err.code || 'UNKNOWN',
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
     } finally {
         if (client) client.release();
     }
-}
-startServer();
+});
 
 
 
@@ -234,10 +270,16 @@ app.use(cors({
     allowedHeaders: ['Content-Type']
 }));
 app.get('/api/health', async (req, res) => {
+    let client;
     try {
-        console.log('Verificando health check...');
-        await pool.query('SELECT 1', [], { timeout: 1000 });
-        console.log('Conexão com o banco bem-sucedida');
+        console.log('Verificando health check...', {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
+        client = await pool.connect();
+        await client.query('SELECT 1');
+        console.log('Conexão com o banco bem-sucedida', {
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
         res.status(200).json({ status: 'OK', database: 'connected' });
     } catch (err) {
         console.error('Erro no health check:', {
@@ -251,8 +293,11 @@ app.get('/api/health', async (req, res) => {
             status: 'ERROR', 
             error: 'Falha na conexão com o banco', 
             details: err.message || 'Erro desconhecido',
-            code: err.code || 'UNKNOWN'
+            code: err.code || 'UNKNOWN',
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
+    } finally {
+        if (client) client.release();
     }
 });
 // Endpoint de login 
@@ -276,14 +321,14 @@ app.post('/api/login', async (req, res) => {
             vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
         client = await pool.connect();
-        await withTimeout(client.query('SELECT 1'), 1000);
+        await client.query('SELECT 1');
 
         console.log('Verificando existência da tabela users', {
             vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
-        const tableCheck = await withTimeout(
-            client.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", ['users']),
-            1000
+        const tableCheck = await client.query(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+            ['users']
         );
         if (!tableCheck.rows[0].exists) {
             console.error('Tabela users não encontrada', {
@@ -295,10 +340,7 @@ app.post('/api/login', async (req, res) => {
         console.log('Consultando usuário:', username, {
             vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
         });
-        const result = await withTimeout(
-            client.query('SELECT * FROM users WHERE username = $1', [username]),
-            1000
-        );
+        const result = await client.query('SELECT * FROM users WHERE username = $1', [username]);
         const user = result.rows[0];
 
         if (!user) {
