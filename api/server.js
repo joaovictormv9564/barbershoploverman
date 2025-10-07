@@ -67,28 +67,49 @@ app.use(express.static('public'));
 
 // Função para configurar tabelas 
 async function setupTables() {
+    console.log('Iniciando configuração das tabelas...');
     let client;
     try {
-        console.log('Iniciando configuração das tabelas...');
         client = await pool.connect();
         console.log('Conexão com o banco Neon estabelecida com sucesso');
 
-        // Criar tabela users se não existir
+        // Criar tabela users
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                role VARCHAR(20) NOT NULL,
-                name VARCHAR(100) NOT NULL,
-                phone VARCHAR(20)
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL,
+                name TEXT,
+                phone TEXT
             );
         `);
-        console.log('Tabela users já existe, verificando dados iniciais...');
+        console.log('Tabela users criada ou já existe.');
 
-        // Verificar se o usuário admin existe
-        const result = await client.query('SELECT 1 FROM users WHERE username = $1', ['admin']);
-        if (result.rowCount === 0) {
+        // Criar tabela barbers
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS barbers (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+        `);
+        console.log('Tabela barbers criada ou já existe.');
+
+        // Criar tabela appointments
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS appointments (
+                id SERIAL PRIMARY KEY,
+                date DATE NOT NULL,
+                time TIME NOT NULL,
+                barber_id INTEGER REFERENCES barbers(id),
+                client_id INTEGER REFERENCES users(id)
+            );
+        `);
+        console.log('Tabela appointments criada ou já existe.');
+
+        // Verificar e criar usuário admin
+        const adminResult = await client.query('SELECT 1 FROM users WHERE username = $1', ['admin']);
+        if (adminResult.rowCount === 0) {
             console.log('Criando usuário admin...');
             await client.query(
                 'INSERT INTO users (username, password, role, name, phone) VALUES ($1, $2, $3, $4, $5)',
@@ -96,7 +117,20 @@ async function setupTables() {
             );
             console.log('Usuário admin criado com sucesso');
         } else {
-            console.log('Dados iniciais já existem, pulando criação.');
+            console.log('Usuário admin já existe, pulando criação.');
+        }
+
+        // Verificar e criar barbeiros iniciais
+        const barbersResult = await client.query('SELECT 1 FROM barbers LIMIT 1');
+        if (barbersResult.rowCount === 0) {
+            console.log('Criando barbeiros iniciais...');
+            await client.query(
+                'INSERT INTO barbers (name) VALUES ($1), ($2)',
+                ['João Silva', 'Maria Santos']
+            );
+            console.log('Barbeiros iniciais criados com sucesso');
+        } else {
+            console.log('Barbeiros já existem, pulando criação.');
         }
     } catch (err) {
         console.error('Erro ao executar setupTables:', {
@@ -105,7 +139,7 @@ async function setupTables() {
             code: err.code,
             detail: err.detail
         });
-        throw err; // Propaga o erro para ser tratado em startServer
+        throw err;
     } finally {
         if (client) {
             await client.release();
@@ -119,7 +153,7 @@ setupTables().catch(err => {
     process.exit(1);
 });
 
-// Iniciar servidor após configuração do banco
+
 // Iniciar servidor após configuração do banco
 const port = process.env.PORT || 3000;
 async function startServer() {
@@ -309,13 +343,17 @@ app.post('/api/register', async (req, res) => {
 // Endpoint para listar clientes (para painel admin)
 app.get('/api/users', async (req, res) => {
     try {
-    
-        const result = await client.query('SELECT id, username, name, phone FROM users WHERE role = $1', ['client']);
-    
+        const result = await pool.query('SELECT id, username, name, phone FROM users WHERE role = $1', ['client']);
         console.log('Clientes enviados:', result.rows);
-        res.json(result.rows);
+        res.json(result.rows || []);
     } catch (err) {
-        console.error('Erro ao listar clientes:', err.message, err.stack);
+        console.error('Erro ao listar clientes:', {
+            message: err.message,
+            stack: err.stack,
+            code: err.code,
+            detail: err.detail,
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
@@ -323,13 +361,17 @@ app.get('/api/users', async (req, res) => {
 // Endpoint para listar barbeiros
 app.get('/api/barbers', async (req, res) => {
     try {
-        
-        const result = await client.query('SELECT * FROM barbers');
-        
+        const result = await pool.query('SELECT * FROM barbers');
         console.log('Barbeiros enviados:', result.rows);
-        res.json(result.rows);
+        res.json(result.rows || []);
     } catch (err) {
-        console.error('Erro ao listar barbeiros:', err.message, err.stack);
+        console.error('Erro ao listar barbeiros:', {
+            message: err.message,
+            stack: err.stack,
+            code: err.code,
+            detail: err.detail,
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
@@ -414,64 +456,54 @@ function isAdmin(req, res, next) {
 // Endpoint para listar agendamentos 
 app.get('/api/appointments', async (req, res) => {
     const { barber_id, client_id, date, all, isAdmin } = req.query;
-    
     let query = `
         SELECT a.id, a.date, a.time, a.barber_id, a.client_id, 
                b.name AS barber_name
     `;
-    
-    // Somente admins veem informações do cliente
     if (isAdmin === 'true') {
         query += `, u.name AS client_name, u.phone AS client_phone`;
     } else {
         query += `, 'Cliente' AS client_name, '' AS client_phone`;
     }
-    
     query += `
         FROM appointments a
         JOIN barbers b ON a.barber_id = b.id
         JOIN users u ON a.client_id = u.id
     `;
-    
     const params = [];
     let whereClauses = [];
-    
     if (barber_id) {
         params.push(barber_id);
         whereClauses.push(`a.barber_id = $${params.length}`);
     }
-    
     if (client_id && isAdmin === 'true') {
-        // Somente admins podem filtrar por client_id
         params.push(client_id);
         whereClauses.push(`a.client_id = $${params.length}`);
     }
-    
     if (date) {
         params.push(date);
         whereClauses.push(`a.date = $${params.length}`);
     }
-    
     if (whereClauses.length > 0) {
         query += ` WHERE ${whereClauses.join(' AND ')}`;
     }
-    
     query += ` ORDER BY a.date, a.time`;
-    
     console.log('Executando query de agendamentos:', query, 'com params:', params);
-    
     try {
-        
-        const result = await client.query(query, params);
-        
+        const result = await pool.query(query, params);
         console.log('Agendamentos encontrados:', result.rows.length);
-        res.json(result.rows);
+        res.json(result.rows || []);
     } catch (err) {
-        console.error('Erro ao buscar agendamentos:', err.message, err.stack);
+        console.error('Erro ao buscar agendamentos:', {
+            message: err.message,
+            stack: err.stack,
+            code: err.code,
+            detail: err.detail,
+            vercelInvocationId: req.headers['x-vercel-id'] || 'unknown'
+        });
         res.status(500).json({ error: 'Erro no servidor', details: err.message });
     }
 });
-
 // Endpoint para verificar se horário está ocupado
 app.get('/api/appointments/check', async (req, res) => {
     const { barber_id, date, time, isAdmin } = req.query;
